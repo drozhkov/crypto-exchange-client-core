@@ -98,8 +98,6 @@ namespace as {
 			AS_CALL( m_errorHandler, *this, ec.value(), ec.message() );
 			return;
 		}
-
-		readAsync();
 	}
 
 	void WsClient::OnRead( boost::system::error_code ec, std::size_t bytesRead )
@@ -109,7 +107,7 @@ namespace as {
 			return;
 		}
 
-		RefreshLastActivityTs();
+		refreshLastActivityTs();
 
 		try {
 			AS_CALL( m_readHandler,
@@ -125,6 +123,14 @@ namespace as {
 		readAsync();
 	}
 
+	void WsClient::OnPing( boost::system::error_code ec )
+	{
+		if ( ec ) {
+			AS_CALL( m_errorHandler, *this, ec.value(), ec.message() );
+			return;
+		}
+	}
+
 	void WsClient::OnClose( boost::system::error_code ec )
 	{
 		if ( ec ) {
@@ -137,7 +143,7 @@ namespace as {
 		boost::beast::string_view payload )
 	{
 
-		RefreshLastActivityTs();
+		refreshLastActivityTs();
 
 		if ( boost::beast::websocket::frame_type::ping == type ) {
 			m_stream.async_pong(
@@ -158,14 +164,15 @@ namespace as {
 				std::placeholders::_1,
 				std::placeholders::_2 ) );
 
-		RefreshLastActivityTs();
+		refreshLastActivityTs();
 		m_isWatchdogActive.test_and_set();
 
 		m_watchdogThread = std::thread( [this] {
 			while ( m_isWatchdogActive.test_and_set() ) {
-				std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
+				std::this_thread::sleep_for(
+					std::chrono::milliseconds( m_watchdogTimeoutMs / 2 ) );
 
-				if ( NowTs() - m_lastActivityTs > m_watchdogTimeoutSeconds ) {
+				if ( NowTs() - m_lastActivityTs > m_watchdogTimeoutMs ) {
 					m_io.stop();
 
 					return;
@@ -204,6 +211,13 @@ namespace as {
 				this,
 				std::placeholders::_1,
 				std::placeholders::_2 ) );
+	}
+
+	void WsClient::pingAsync( const void * data, size_t size )
+	{
+		std::lock_guard<std::mutex> lock( m_streamPingSync );
+		m_stream.async_ping( { static_cast<const char *>( data ), size },
+			std::bind( &WsClient::OnPing, this, std::placeholders::_1 ) );
 	}
 
 }

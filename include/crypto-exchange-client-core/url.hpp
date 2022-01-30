@@ -47,8 +47,7 @@ namespace as {
 
 	public:
 		Url( const t_string & uri )
-			: m_uri( uri )
-			, m_port( 0 )
+			: m_port( 0 )
 		{
 
 			parse( *this, uri );
@@ -56,6 +55,8 @@ namespace as {
 
 		static void parse( Url & out, const t_string & s )
 		{
+			out.m_uri = s;
+
 			out.m_scheme = s.substr( 0, s.find( AS_T( ':' ) ) );
 
 			auto tokenStart = s.find( AS_T( "//" ) );
@@ -100,18 +101,52 @@ namespace as {
 			return out;
 		}
 
+		Url addPath( const t_string & s )
+		{
+			if ( s.empty() ) {
+				return Url( *this );
+			}
+
+			if ( AS_T( '/' ) == s[0] ) {
+				if ( AS_T( '/' ) == m_uri[m_uri.length() - 1] ) {
+					return Url( m_uri + s.substr( 1 ) );
+				}
+
+				return Url( m_uri + s );
+			}
+
+			if ( AS_T( '/' ) == m_uri[m_uri.length() - 1] ) {
+				return Url( m_uri + s );
+			}
+
+			return Url( m_uri + '/' + s );
+		}
+
+		Url add( const t_string & s )
+		{
+			return Url( m_uri + s );
+		}
+
+		const t_string & Uri() const
+		{
+			return m_uri;
+		}
+
 		const t_string & Scheme() const
 		{
 			return m_scheme;
 		}
+
 		const t_string & Hostname() const
 		{
 			return m_hostname;
 		}
+
 		const t_string & Path() const
 		{
 			return m_path;
 		}
+
 		uint16_t Port() const
 		{
 			return m_port;

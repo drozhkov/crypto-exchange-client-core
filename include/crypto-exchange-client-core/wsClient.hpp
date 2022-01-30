@@ -46,6 +46,8 @@ namespace as {
 
 	class WsClient;
 
+	using t_timespan = int64_t;
+
 	using t_wsErrorHandler =
 		std::function<void( WsClient &, int, const std::string & )>;
 
@@ -60,7 +62,7 @@ namespace as {
 
 	class WsClient {
 	protected:
-		int64_t m_watchdogTimeoutSeconds = 25;
+		t_timespan m_watchdogTimeoutMs = 15 * 1000;
 
 		Url m_url;
 
@@ -70,6 +72,7 @@ namespace as {
 		t_wsStream m_stream;
 
 		std::mutex m_streamWriteSync;
+		std::mutex m_streamPingSync;
 
 		boost::beast::flat_buffer m_buffer;
 
@@ -83,19 +86,19 @@ namespace as {
 		std::atomic_flag m_isWatchdogActive;
 
 	protected:
-		auto NowTs() const
-		{
-			return std::chrono::duration_cast<std::chrono::seconds>(
-				std::chrono::system_clock::now().time_since_epoch() )
-				.count();
-		}
-
-		void RefreshLastActivityTs()
+		void refreshLastActivityTs()
 		{
 			m_lastActivityTs.store(
-				std::chrono::duration_cast<std::chrono::seconds>(
-					std::chrono::system_clock::now().time_since_epoch() )
+				std::chrono::duration_cast<std::chrono::milliseconds>(
+					std::chrono::steady_clock::now().time_since_epoch() )
 					.count() );
+		}
+
+		auto NowTs() const
+		{
+			return std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::steady_clock::now().time_since_epoch() )
+				.count();
 		}
 
 		void OnResolve( boost::system::error_code ec,
@@ -104,12 +107,14 @@ namespace as {
 		void OnConnect( boost::system::error_code ec );
 		void OnSslHandshake( boost::system::error_code ec );
 		void OnHandshake( boost::system::error_code ec );
-		void OnWrite( boost::system::error_code ec, std::size_t bytesWritten );
 
+		void OnWrite( boost::system::error_code ec, std::size_t bytesWritten );
 		void OnRead( boost::system::error_code ec, std::size_t bytesRead );
-		void OnClose( boost::system::error_code ec );
+		void OnPing( boost::system::error_code ec );
 		void OnControl(
 			boost::beast::websocket::frame_type, boost::beast::string_view );
+
+		void OnClose( boost::system::error_code ec );
 
 	public:
 		WsClient( const Url & url )
@@ -131,6 +136,7 @@ namespace as {
 		void readAsync();
 		void write( const void * data, size_t size );
 		void writeAsync( const void * data, size_t size );
+		void pingAsync( const void * data, size_t size );
 
 		void ErrorHandler( const t_wsErrorHandler & handler )
 		{
@@ -145,6 +151,11 @@ namespace as {
 		void ReadHandler( const t_wsReadHandler & handler )
 		{
 			m_readHandler = handler;
+		}
+
+		void WatchdogTimeoutMs( t_timespan t )
+		{
+			m_watchdogTimeoutMs = t;
 		}
 	};
 

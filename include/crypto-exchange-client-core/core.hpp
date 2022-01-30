@@ -30,11 +30,15 @@ SOFTWARE.
 #include <string>
 #include <string_view>
 
+#include "boost/rational.hpp"
+
 
 namespace as {
 
 #define AS_T( a_t ) a_t
 #define AS_STOI std::stoi
+#define AS_STOLL std::stoll
+#define AS_TOSTRING std::to_string
 #define AS_CALL( a, ... )                                                      \
 	if ( a ) {                                                                 \
 		a( __VA_ARGS__ );                                                      \
@@ -59,6 +63,29 @@ namespace as {
 		}
 	};
 
+	// TODO
+	class FixedNumber {
+	protected:
+		boost::rational<int64_t> m_value;
+
+	public:
+		void Value( const as::t_stringview & s )
+		{
+			auto dotPos = s.find( AS_T( '.' ) );
+			auto i = s.substr( 0, dotPos );
+			auto f = s.substr( dotPos + 1 );
+
+			auto n = AS_STOLL( as::t_string( i ) + as::t_string( f ) );
+			auto d = static_cast<int64_t>( std::pow( 10, f.length() ) );
+
+			m_value.assign( n, d );
+		}
+
+		double Value() const
+		{
+			return boost::rational_cast<double>( m_value );
+		}
+	};
 
 	inline t_string toHex( t_buffer & buffer )
 	{

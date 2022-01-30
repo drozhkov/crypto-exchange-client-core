@@ -7,6 +7,7 @@ add_library (${PROJECT_NAME}
 	src/wsClient.cpp
 	src/httpClient.cpp
 	src/client.cpp
+	src/wsMessage.cpp
 )
 
 

@@ -18,35 +18,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/// client.cpp
+/// wsMessage.hpp
 ///
 /// 0.0 - created (Denis Rozhkov <denis@rozhkoff.com>)
 ///
 
-#include "crypto-exchange-client-core/client.hpp"
+#include "crypto-exchange-client-core/wsMessage.hpp"
 
 
 namespace as::cryptox {
 
-	void Client::initWsClient()
-	{
-		m_wsClient = std::make_unique<as::WsClient>( m_wsApiUrl );
-		m_wsClient->ErrorHandler( std::bind( &Client::wsErrorHandler,
-			this,
-			std::placeholders::_1,
-			std::placeholders::_2,
-			std::placeholders::_3 ) );
-
-		m_wsClient->HandshakeHandler( std::bind(
-			&Client::wsHandshakeHandler, this, std::placeholders::_1 ) );
-
-		m_wsClient->ReadHandler( std::bind( &Client::wsReadHandler,
-			this,
-			std::placeholders::_1,
-			std::placeholders::_2,
-			std::placeholders::_3 ) );
-
-		m_wsClient->WatchdogTimeoutMs( m_wsTimeoutMs );
-	}
+	std::shared_ptr<WsMessage> WsMessage::s_unknown =
+		std::make_shared<WsMessage>( WsMessage::TypeIdUnknown );
 
 }

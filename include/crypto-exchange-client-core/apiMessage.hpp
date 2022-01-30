@@ -18,35 +18,34 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/// client.cpp
+/// apiMessage.hpp
 ///
 /// 0.0 - created (Denis Rozhkov <denis@rozhkoff.com>)
 ///
 
-#include "crypto-exchange-client-core/client.hpp"
+#ifndef __CRYPTO_EXCHANGE_CLIENT_CORE__API_MESSAGE__H
+#define __CRYPTO_EXCHANGE_CLIENT_CORE__API_MESSAGE__H
+
+
+#include <memory>
 
 
 namespace as::cryptox {
 
-	void Client::initWsClient()
-	{
-		m_wsClient = std::make_unique<as::WsClient>( m_wsApiUrl );
-		m_wsClient->ErrorHandler( std::bind( &Client::wsErrorHandler,
-			this,
-			std::placeholders::_1,
-			std::placeholders::_2,
-			std::placeholders::_3 ) );
+	class ApiMessage {
+	protected:
+		bool m_isGood = false;
 
-		m_wsClient->HandshakeHandler( std::bind(
-			&Client::wsHandshakeHandler, this, std::placeholders::_1 ) );
+	public:
+		virtual ~ApiMessage() = default;
 
-		m_wsClient->ReadHandler( std::bind( &Client::wsReadHandler,
-			this,
-			std::placeholders::_1,
-			std::placeholders::_2,
-			std::placeholders::_3 ) );
-
-		m_wsClient->WatchdogTimeoutMs( m_wsTimeoutMs );
-	}
+		bool IsGood() const
+		{
+			return m_isGood;
+		}
+	};
 
 }
+
+
+#endif

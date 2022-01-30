@@ -146,7 +146,7 @@ namespace as {
 		std::unordered_map<std::string, std::shared_ptr<PersistentHttpsClient>>
 			m_persistentClientsMap;
 
-		std::mutex m_persistentClientsMapSync;
+		std::recursive_mutex m_persistentClientsMapSync;
 
 	protected:
 		std::shared_ptr<PersistentHttpsClient> persistentClient(

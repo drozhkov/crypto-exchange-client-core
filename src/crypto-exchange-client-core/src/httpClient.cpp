@@ -23,6 +23,8 @@ SOFTWARE.
 /// 0.0 - created (Denis Rozhkov <denis@rozhkoff.com>)
 ///
 
+#include <iostream>
+
 #include "boost/beast/core/buffers_to_string.hpp"
 
 #include "crypto-exchange-client-core/httpClient.hpp"
@@ -115,7 +117,9 @@ namespace as {
 		const std::string & hostname )
 	{
 
-		std::lock_guard<std::mutex> lock( m_persistentClientsMapSync );
+		std::lock_guard<std::recursive_mutex> lock(
+			m_persistentClientsMapSync );
+
 		auto it = m_persistentClientsMap.find( hostname );
 
 		if ( m_persistentClientsMap.end() == it ) {

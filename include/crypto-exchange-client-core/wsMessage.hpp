@@ -18,35 +18,46 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/// client.cpp
+/// wsMessage.hpp
 ///
 /// 0.0 - created (Denis Rozhkov <denis@rozhkoff.com>)
 ///
 
-#include "crypto-exchange-client-core/client.hpp"
+#ifndef __CRYPTO_EXCHANGE_CLIENT_CORE__WS_MESSAGE__H
+#define __CRYPTO_EXCHANGE_CLIENT_CORE__WS_MESSAGE__H
+
+
+#include <memory>
 
 
 namespace as::cryptox {
 
-	void Client::initWsClient()
-	{
-		m_wsClient = std::make_unique<as::WsClient>( m_wsApiUrl );
-		m_wsClient->ErrorHandler( std::bind( &Client::wsErrorHandler,
-			this,
-			std::placeholders::_1,
-			std::placeholders::_2,
-			std::placeholders::_3 ) );
+	using t_ws_message_type_id = int;
 
-		m_wsClient->HandshakeHandler( std::bind(
-			&Client::wsHandshakeHandler, this, std::placeholders::_1 ) );
+	class WsMessage {
+	protected:
+		static std::shared_ptr<WsMessage> s_unknown;
 
-		m_wsClient->ReadHandler( std::bind( &Client::wsReadHandler,
-			this,
-			std::placeholders::_1,
-			std::placeholders::_2,
-			std::placeholders::_3 ) );
+		t_ws_message_type_id m_typeId;
 
-		m_wsClient->WatchdogTimeoutMs( m_wsTimeoutMs );
-	}
+	public:
+		static const as::cryptox::t_ws_message_type_id TypeIdUnknown = 1;
+
+	public:
+		WsMessage( t_ws_message_type_id typeId )
+			: m_typeId( typeId )
+		{
+		}
+
+		virtual ~WsMessage() = default;
+
+		t_ws_message_type_id TypeId() const
+		{
+			return m_typeId;
+		}
+	};
 
 }
+
+
+#endif
