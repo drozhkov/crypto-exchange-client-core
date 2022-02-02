@@ -86,19 +86,16 @@ namespace as {
 		std::atomic_flag m_isWatchdogActive;
 
 	protected:
-		void refreshLastActivityTs()
-		{
-			m_lastActivityTs.store(
-				std::chrono::duration_cast<std::chrono::milliseconds>(
-					std::chrono::steady_clock::now().time_since_epoch() )
-					.count() );
-		}
-
-		auto NowTs() const
+		static auto NowTs()
 		{
 			return std::chrono::duration_cast<std::chrono::milliseconds>(
 				std::chrono::steady_clock::now().time_since_epoch() )
 				.count();
+		}
+
+		void refreshLastActivityTs()
+		{
+			m_lastActivityTs.store( NowTs() );
 		}
 
 		void OnResolve( boost::system::error_code ec,

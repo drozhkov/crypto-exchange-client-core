@@ -41,10 +41,13 @@ SOFTWARE.
 #include "boost/beast/core.hpp"
 #include "boost/beast/http.hpp"
 
+#include "core.hpp"
 #include "url.hpp"
 
 
 namespace as {
+
+	enum class HttpMethod { _undef, GET, POST, PUT };
 
 	class HttpHeader {
 	protected:
@@ -52,7 +55,8 @@ namespace as {
 		std::string m_value;
 
 	public:
-		HttpHeader( const std::string & name, const std::string & value )
+		HttpHeader(
+			const as::t_stringview & name, const as::t_stringview & value )
 			: m_name( name )
 			, m_value( value )
 		{
@@ -74,8 +78,10 @@ namespace as {
 		std::vector<HttpHeader> m_list;
 
 	public:
-		void add( const std::string & name, const std::string & value )
+		void add(
+			const as::t_stringview & name, const as::t_stringview & value )
 		{
+
 			m_list.emplace_back( name, value );
 		}
 
@@ -109,7 +115,7 @@ namespace as {
 
 	public:
 		PersistentHttpsClient(
-			const std::string & hostname, uint16_t port = 443 )
+			const as::t_stringview & hostname, uint16_t port = 443 )
 			: m_hostname( hostname )
 			, m_port( port )
 			, m_userAgent( "as-http-client" )
@@ -129,16 +135,16 @@ namespace as {
 		std::string request( const Url & uri,
 			const HttpHeaderList & headers,
 			boost::beast::http::verb verb,
-			const std::string & body = "" );
+			const as::t_stringview & body = "" );
 
 		std::string get( const Url & uri, const HttpHeaderList & headers );
 		std::string post( const Url & uri,
 			const HttpHeaderList & headers,
-			const std::string & body );
+			const as::t_stringview & body );
 
 		std::string put( const Url & uri,
 			const HttpHeaderList & headers,
-			const std::string & body );
+			const as::t_stringview & body );
 	};
 
 	class HttpsClient {
@@ -150,17 +156,40 @@ namespace as {
 
 	protected:
 		std::shared_ptr<PersistentHttpsClient> persistentClient(
-			const std::string & hostname );
+			const as::t_stringview & hostname );
 
 	public:
+		static const as::t_char * MethodName( as::HttpMethod method )
+		{
+			switch ( method ) {
+				case as::HttpMethod::GET:
+					return AS_T( "GET" );
+					break;
+
+				case as::HttpMethod::POST:
+					return AS_T( "POST" );
+					break;
+
+				case as::HttpMethod::PUT:
+					return AS_T( "PUT" );
+					break;
+
+					// case as::HttpMethod::DELETE:
+					//	return AS_T( "DELETE" );
+					//	break;
+			}
+
+			return AS_T( "UNKNOWN" );
+		}
+
 		std::string get( const Url & uri, const HttpHeaderList & headers );
 		std::string post( const Url & uri,
 			const HttpHeaderList & headers,
-			const std::string & body );
+			const as::t_stringview & body = AS_T( "" ) );
 
 		std::string put( const Url & uri,
 			const HttpHeaderList & headers,
-			const std::string & body );
+			const as::t_stringview & body = AS_T( "" ) );
 	};
 
 }

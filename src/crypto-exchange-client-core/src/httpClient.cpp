@@ -23,8 +23,6 @@ SOFTWARE.
 /// 0.0 - created (Denis Rozhkov <denis@rozhkoff.com>)
 ///
 
-#include <iostream>
-
 #include "boost/beast/core/buffers_to_string.hpp"
 
 #include "crypto-exchange-client-core/httpClient.hpp"
@@ -56,7 +54,7 @@ namespace as {
 	std::string PersistentHttpsClient::request( const Url & uri,
 		const HttpHeaderList & headers,
 		boost::beast::http::verb verb,
-		const std::string & body )
+		const as::t_stringview & body )
 	{
 
 		connect();
@@ -66,6 +64,7 @@ namespace as {
 
 		req.set( boost::beast::http::field::host, m_hostname );
 		req.set( boost::beast::http::field::user_agent, m_userAgent );
+		req.set( boost::beast::http::field::connection, "keep-alive" );
 
 		for ( size_t i = 0; i < headers.Count(); ++i ) {
 			auto & header = headers.Item( i );
@@ -73,7 +72,7 @@ namespace as {
 		}
 
 		if ( !body.empty() ) {
-			req.set( boost::beast::http::field::body, body );
+			req.set( boost::beast::http::field::body, body.data() );
 		}
 
 		{
@@ -98,7 +97,7 @@ namespace as {
 
 	std::string PersistentHttpsClient::post( const Url & uri,
 		const HttpHeaderList & headers,
-		const std::string & body )
+		const as::t_stringview & body )
 	{
 
 		return request( uri, headers, boost::beast::http::verb::post );
@@ -106,7 +105,7 @@ namespace as {
 
 	std::string PersistentHttpsClient::put( const Url & uri,
 		const HttpHeaderList & headers,
-		const std::string & body )
+		const as::t_stringview & body )
 	{
 
 		return request( uri, headers, boost::beast::http::verb::put );
@@ -114,16 +113,16 @@ namespace as {
 
 
 	std::shared_ptr<PersistentHttpsClient> HttpsClient::persistentClient(
-		const std::string & hostname )
+		const as::t_stringview & hostname )
 	{
 
 		std::lock_guard<std::recursive_mutex> lock(
 			m_persistentClientsMapSync );
 
-		auto it = m_persistentClientsMap.find( hostname );
+		auto it = m_persistentClientsMap.find( hostname.data() );
 
 		if ( m_persistentClientsMap.end() == it ) {
-			m_persistentClientsMap.insert( { hostname,
+			m_persistentClientsMap.insert( { hostname.data(),
 				std::make_shared<PersistentHttpsClient>( hostname ) } );
 
 			return persistentClient( hostname );
@@ -143,7 +142,7 @@ namespace as {
 
 	std::string HttpsClient::post( const Url & uri,
 		const HttpHeaderList & headers,
-		const std::string & body )
+		const as::t_stringview & body )
 	{
 
 		auto httpsClient = persistentClient( uri.Hostname() );
@@ -153,7 +152,7 @@ namespace as {
 
 	std::string HttpsClient::put( const Url & uri,
 		const HttpHeaderList & headers,
-		const std::string & body )
+		const as::t_stringview & body )
 	{
 
 		auto httpsClient = persistentClient( uri.Hostname() );

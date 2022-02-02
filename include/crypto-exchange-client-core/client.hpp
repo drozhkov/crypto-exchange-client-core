@@ -73,18 +73,43 @@ namespace as::cryptox {
 		std::unordered_map<Symbol, t_priceBookTickerHandler>
 			m_priceBookTickerHandlerMap;
 
+		std::unordered_map<as::t_stringview, Symbol> m_symbolMap;
+		std::unordered_map<Symbol, as::t_stringview> m_symbolReverseMap;
+
 	protected:
+		template <typename T> static t_timespan UnixTs()
+		{
+			return std::chrono::duration_cast<T>(
+				std::chrono::system_clock::now().time_since_epoch() )
+				.count();
+		}
+
 		virtual void wsErrorHandler(
 			as::WsClient &, int, const as::t_string & ) = 0;
 
 		virtual void wsHandshakeHandler( as::WsClient & ) = 0;
 		virtual void wsReadHandler( as::WsClient &, const char *, size_t ) = 0;
 
+		void addSymbolMapEntry(
+			const as::t_stringview & name, as::cryptox::Symbol s )
+		{
+
+			m_symbolMap.emplace( name, s );
+			m_symbolReverseMap.emplace( s, name );
+		}
+
+		virtual void initSymbolMap()
+		{
+			addSymbolMapEntry( AS_T( "all" ), as::cryptox::Symbol::ALL );
+		}
+
 		virtual void initWsClient();
 
 		template <typename TMap, typename TArg>
-		void callSymbolHandler( as::cryptox::Symbol symbol, TMap & map, TArg & arg )
+		void callSymbolHandler(
+			as::cryptox::Symbol symbol, TMap & map, TArg & arg )
 		{
+
 			auto it = map.find( symbol );
 
 			if ( map.end() == it ) {
@@ -101,6 +126,7 @@ namespace as::cryptox {
 			: m_httpApiUrl( httpApiUrl )
 			, m_wsApiUrl( wsApiUrl )
 		{
+			initSymbolMap();
 		}
 
 		virtual ~Client() = default;
@@ -120,12 +146,10 @@ namespace as::cryptox {
 
 		virtual const as::t_char * SymbolName( Symbol symbol ) const
 		{
-			switch ( symbol ) {
-				case Symbol::BTC_USDT:
-					return AS_T( "BTC_USDT" );
+			auto it = m_symbolReverseMap.find( symbol );
 
-				case Symbol::ALL:
-					return AS_T( "all" );
+			if ( m_symbolReverseMap.end() != it ) {
+				return it->second.data();
 			}
 
 			return AS_T( "UNKNOWN" );
@@ -133,15 +157,10 @@ namespace as::cryptox {
 
 		virtual Symbol Symbol( const as::t_char * symbolName ) const
 		{
-			if ( std::strcmp( SymbolName( Symbol::BTC_USDT ), symbolName ) ==
-				0 ) {
+			auto it = m_symbolMap.find( symbolName );
 
-				return Symbol::BTC_USDT;
-			}
-
-			if ( std::strcmp( SymbolName( Symbol::ALL ), symbolName ) == 0 ) {
-
-				return Symbol::ALL;
+			if ( m_symbolMap.end() != it ) {
+				return it->second;
 			}
 
 			return Symbol::UNKNOWN;
