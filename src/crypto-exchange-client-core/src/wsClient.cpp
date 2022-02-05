@@ -42,11 +42,16 @@ namespace as {
 		boost::asio::async_connect( m_stream.next_layer().next_layer(),
 			results.begin(),
 			results.end(),
-			std::bind( &WsClient::OnConnect, this, std::placeholders::_1 ) );
+			std::bind( &WsClient::OnConnect,
+				this,
+				std::placeholders::_1,
+				std::placeholders::_2 ) );
 	}
 
-	void WsClient::OnConnect( boost::system::error_code ec )
+	void WsClient::OnConnect( boost::system::error_code ec,
+		boost::asio::ip::tcp::resolver::results_type::iterator it )
 	{
+
 		if ( ec ) {
 			AS_CALL( m_errorHandler, *this, ec.value(), ec.message() );
 			return;
@@ -110,10 +115,13 @@ namespace as {
 		refreshLastActivityTs();
 
 		try {
-			AS_CALL( m_readHandler,
-				*this,
-				static_cast<const char *>( m_buffer.data().data() ),
-				m_buffer.data().size() );
+			if ( m_readHandler &&
+				!m_readHandler( *this,
+					static_cast<const char *>( m_buffer.data().data() ),
+					m_buffer.data().size() ) ) {
+
+				return;
+			}
 		}
 		catch ( ... ) {
 		}

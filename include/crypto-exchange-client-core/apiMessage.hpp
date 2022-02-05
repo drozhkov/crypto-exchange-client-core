@@ -28,16 +28,64 @@ SOFTWARE.
 
 
 #include <memory>
+#include <atomic>
 
 
 namespace as::cryptox {
 
-	class ApiMessage {
+	using t_request_id = unsigned;
+	using t_api_message_type_id = int;
+
+
+	class ApiMessageBase {
 	protected:
+		static std::shared_ptr<ApiMessageBase> s_unknown;
+
+		t_api_message_type_id m_typeId;
+
+	public:
+		static const as::cryptox::t_api_message_type_id TypeIdUnknown = 1;
+		static const as::cryptox::t_api_message_type_id TypeIdError = 2;
+
+	public:
+		ApiMessageBase( t_api_message_type_id typeId )
+			: m_typeId( typeId )
+		{
+		}
+
+		virtual ~ApiMessageBase() = default;
+
+		t_api_message_type_id TypeId() const
+		{
+			return m_typeId;
+		}
+	};
+
+	template <typename T> class ApiMessage : public ApiMessageBase {
+	protected:
+		inline static std::atomic_uint s_requestId;
+
 		bool m_isGood = false;
 
 	public:
+		ApiMessage( t_api_message_type_id typeId )
+			: ApiMessageBase( typeId )
+		{
+		}
+
 		virtual ~ApiMessage() = default;
+
+		static auto RequestId()
+		{
+			auto id = ++s_requestId;
+
+			// TODO
+			if ( id > INT_MAX ) {
+				s_requestId.store( 0 );
+			}
+
+			return id;
+		}
 
 		bool IsGood() const
 		{

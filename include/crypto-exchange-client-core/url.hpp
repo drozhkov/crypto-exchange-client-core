@@ -46,14 +46,14 @@ namespace as {
 		Url() = default;
 
 	public:
-		Url( const t_string & uri )
+		Url( const t_stringview & uri )
 			: m_port( 0 )
 		{
 
-			parse( *this, uri );
+			parse( *this, uri.data() );
 		}
 
-		static void parse( Url & out, const t_string & s )
+		static void parse( Url & out, const t_stringview & s )
 		{
 			out.m_uri = s;
 
@@ -74,8 +74,9 @@ namespace as {
 			}
 
 			out.m_path = AS_T( '/' ) +
-				( t_string::npos == tokenEnd ? AS_T( "" )
-											 : s.substr( tokenEnd + 1 ) );
+				t_string( t_string::npos == tokenEnd
+						? AS_T( "" )
+						: s.substr( tokenEnd + 1 ) );
 
 			if ( out.m_port != 0 ) {
 				return;
@@ -93,15 +94,15 @@ namespace as {
 			}
 		}
 
-		static Url parse( const t_string & s )
+		static Url parse( const t_stringview & s )
 		{
 			Url out;
-			parse( out, s );
+			parse( out, s.data() );
 
 			return out;
 		}
 
-		Url addPath( const t_string & s )
+		Url addPath( const t_stringview & s ) const
 		{
 			if ( s.empty() ) {
 				return Url( *this );
@@ -109,45 +110,45 @@ namespace as {
 
 			if ( AS_T( '/' ) == s[0] ) {
 				if ( AS_T( '/' ) == m_uri[m_uri.length() - 1] ) {
-					return Url( m_uri + s.substr( 1 ) );
+					return Url( m_uri + s.substr( 1 ).data() );
 				}
 
-				return Url( m_uri + s );
+				return Url( m_uri + s.data() );
 			}
 
 			if ( AS_T( '/' ) == m_uri[m_uri.length() - 1] ) {
-				return Url( m_uri + s );
+				return Url( m_uri + s.data() );
 			}
 
-			return Url( m_uri + '/' + s );
+			return Url( m_uri + '/' + s.data() );
 		}
 
-		Url add( const t_string & s )
+		Url add( const t_stringview & s ) const
 		{
-			return Url( m_uri + s );
+			return Url( m_uri + s.data() );
 		}
 
-		const t_string & Uri() const
+		constexpr const t_string & Uri() const
 		{
 			return m_uri;
 		}
 
-		const t_string & Scheme() const
+		constexpr const t_string & Scheme() const
 		{
 			return m_scheme;
 		}
 
-		const t_string & Hostname() const
+		constexpr const t_string & Hostname() const
 		{
 			return m_hostname;
 		}
 
-		const t_string & Path() const
+		constexpr const t_string & Path() const
 		{
 			return m_path;
 		}
 
-		uint16_t Port() const
+		constexpr uint16_t Port() const
 		{
 			return m_port;
 		}

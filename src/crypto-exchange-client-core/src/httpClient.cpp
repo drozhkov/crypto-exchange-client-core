@@ -51,7 +51,7 @@ namespace as {
 		m_stream.handshake( boost::asio::ssl::stream_base::client );
 	}
 
-	std::string PersistentHttpsClient::request( const Url & uri,
+	HttpResponse PersistentHttpsClient::request( const Url & uri,
 		const HttpHeaderList & headers,
 		boost::beast::http::verb verb,
 		const as::t_stringview & body )
@@ -64,7 +64,6 @@ namespace as {
 
 		req.set( boost::beast::http::field::host, m_hostname );
 		req.set( boost::beast::http::field::user_agent, m_userAgent );
-		req.set( boost::beast::http::field::connection, "keep-alive" );
 
 		for ( size_t i = 0; i < headers.Count(); ++i ) {
 			auto & header = headers.Item( i );
@@ -78,24 +77,30 @@ namespace as {
 		{
 			std::lock_guard<std::mutex> lock( m_streamSync );
 
-			boost::beast::http::write( m_stream, req );
+			boost::beast::error_code ec;
+			boost::beast::http::write( m_stream, req, ec );
 
 			boost::beast::flat_buffer buffer;
 			boost::beast::http::response<boost::beast::http::dynamic_body> res;
-			boost::beast::http::read( m_stream, buffer, res );
+			boost::beast::http::read( m_stream, buffer, res, ec );
 
-			return boost::beast::buffers_to_string( res.body().data() );
+			if ( ec ) {
+				return HttpResponse( ec.value() == 1 );
+			}
+
+			return HttpResponse(
+				boost::beast::buffers_to_string( res.body().data() ) );
 		}
 	}
 
-	std::string PersistentHttpsClient::get(
+	HttpResponse PersistentHttpsClient::get(
 		const Url & uri, const HttpHeaderList & headers )
 	{
 
 		return request( uri, headers, boost::beast::http::verb::get );
 	}
 
-	std::string PersistentHttpsClient::post( const Url & uri,
+	HttpResponse PersistentHttpsClient::post( const Url & uri,
 		const HttpHeaderList & headers,
 		const as::t_stringview & body )
 	{
@@ -103,7 +108,7 @@ namespace as {
 		return request( uri, headers, boost::beast::http::verb::post );
 	}
 
-	std::string PersistentHttpsClient::put( const Url & uri,
+	HttpResponse PersistentHttpsClient::put( const Url & uri,
 		const HttpHeaderList & headers,
 		const as::t_stringview & body )
 	{
@@ -111,53 +116,55 @@ namespace as {
 		return request( uri, headers, boost::beast::http::verb::put );
 	}
 
+	//
 
 	std::shared_ptr<PersistentHttpsClient> HttpsClient::persistentClient(
-		const as::t_stringview & hostname )
+		const as::t_stringview & hostname, bool forceNew )
 	{
 
 		std::lock_guard<std::recursive_mutex> lock(
 			m_persistentClientsMapSync );
 
-		auto it = m_persistentClientsMap.find( hostname.data() );
+		auto it = forceNew ? m_persistentClientsMap.end()
+						   : m_persistentClientsMap.find( hostname.data() );
 
 		if ( m_persistentClientsMap.end() == it ) {
-			m_persistentClientsMap.insert( { hostname.data(),
-				std::make_shared<PersistentHttpsClient>( hostname ) } );
-
-			return persistentClient( hostname );
+			it = m_persistentClientsMap
+					 .insert_or_assign( hostname.data(),
+						 std::make_shared<PersistentHttpsClient>( hostname ) )
+					 .first;
 		}
 
 		return ( it->second );
 	}
 
-	std::string HttpsClient::get(
+	as::t_string HttpsClient::get(
 		const Url & uri, const HttpHeaderList & headers )
 	{
 
-		auto httpsClient = persistentClient( uri.Hostname() );
-
-		return httpsClient->get( uri, headers );
+		return makeRequest( uri, [&uri, &headers]( auto & client ) {
+			return client->get( uri, headers );
+		} );
 	}
 
-	std::string HttpsClient::post( const Url & uri,
+	as::t_string HttpsClient::post( const Url & uri,
 		const HttpHeaderList & headers,
 		const as::t_stringview & body )
 	{
 
-		auto httpsClient = persistentClient( uri.Hostname() );
-
-		return httpsClient->post( uri, headers, body );
+		return makeRequest( uri, [&uri, &headers, &body]( auto & client ) {
+			return client->post( uri, headers, body );
+		} );
 	}
 
-	std::string HttpsClient::put( const Url & uri,
+	as::t_string HttpsClient::put( const Url & uri,
 		const HttpHeaderList & headers,
 		const as::t_stringview & body )
 	{
 
-		auto httpsClient = persistentClient( uri.Hostname() );
-
-		return httpsClient->put( uri, headers, body );
+		return makeRequest( uri, [&uri, &headers, &body]( auto & client ) {
+			return client->put( uri, headers, body );
+		} );
 	}
 
 }

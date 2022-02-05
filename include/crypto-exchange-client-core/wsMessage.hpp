@@ -29,32 +29,19 @@ SOFTWARE.
 
 #include <memory>
 
+#include "apiMessage.hpp"
+
 
 namespace as::cryptox {
 
-	using t_ws_message_type_id = int;
-
-	class WsMessage {
-	protected:
-		static std::shared_ptr<WsMessage> s_unknown;
-
-		t_ws_message_type_id m_typeId;
-
+	class WsMessage : public ApiMessageBase {
 	public:
-		static const as::cryptox::t_ws_message_type_id TypeIdUnknown = 1;
-
-	public:
-		WsMessage( t_ws_message_type_id typeId )
-			: m_typeId( typeId )
+		WsMessage( t_api_message_type_id typeId )
+			: ApiMessageBase( typeId )
 		{
 		}
 
 		virtual ~WsMessage() = default;
-
-		t_ws_message_type_id TypeId() const
-		{
-			return m_typeId;
-		}
 	};
 
 }

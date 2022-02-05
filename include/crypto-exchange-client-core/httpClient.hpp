@@ -96,6 +96,33 @@ namespace as {
 		}
 	};
 
+	class HttpResponse {
+	protected:
+		bool m_isEos = false;
+		as::t_string m_text;
+
+	public:
+		HttpResponse( bool isEos )
+			: m_isEos( isEos )
+		{
+		}
+
+		HttpResponse( as::t_string & text )
+			: m_text( std::move( text ) )
+		{
+		}
+
+		bool IsEos() const
+		{
+			return m_isEos;
+		}
+
+		as::t_string & Text()
+		{
+			return m_text;
+		}
+	};
+
 	class PersistentHttpsClient {
 	protected:
 		constexpr static int HttpVersion = 11;
@@ -132,17 +159,17 @@ namespace as {
 
 		void connect();
 
-		std::string request( const Url & uri,
+		HttpResponse request( const Url & uri,
 			const HttpHeaderList & headers,
 			boost::beast::http::verb verb,
 			const as::t_stringview & body = "" );
 
-		std::string get( const Url & uri, const HttpHeaderList & headers );
-		std::string post( const Url & uri,
+		HttpResponse get( const Url & uri, const HttpHeaderList & headers );
+		HttpResponse post( const Url & uri,
 			const HttpHeaderList & headers,
 			const as::t_stringview & body );
 
-		std::string put( const Url & uri,
+		HttpResponse put( const Url & uri,
 			const HttpHeaderList & headers,
 			const as::t_stringview & body );
 	};
@@ -156,7 +183,25 @@ namespace as {
 
 	protected:
 		std::shared_ptr<PersistentHttpsClient> persistentClient(
-			const as::t_stringview & hostname );
+			const as::t_stringview & hostname, bool forceNew = false );
+
+	protected:
+		template <typename F>
+		as::t_string makeRequest( const Url & uri, const F & f )
+		{
+			bool forceNew = false;
+
+			while ( true ) {
+				auto httpsClient = persistentClient( uri.Hostname(), forceNew );
+				auto response = f( httpsClient );
+
+				if ( !response.IsEos() ) {
+					return std::move( response.Text() );
+				}
+
+				forceNew = true;
+			}
+		}
 
 	public:
 		static const as::t_char * MethodName( as::HttpMethod method )
@@ -182,12 +227,12 @@ namespace as {
 			return AS_T( "UNKNOWN" );
 		}
 
-		std::string get( const Url & uri, const HttpHeaderList & headers );
-		std::string post( const Url & uri,
+		as::t_string get( const Url & uri, const HttpHeaderList & headers );
+		as::t_string post( const Url & uri,
 			const HttpHeaderList & headers,
 			const as::t_stringview & body = AS_T( "" ) );
 
-		std::string put( const Url & uri,
+		as::t_string put( const Url & uri,
 			const HttpHeaderList & headers,
 			const as::t_stringview & body = AS_T( "" ) );
 	};

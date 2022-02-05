@@ -39,6 +39,7 @@ SOFTWARE.
 #include "boost/beast/websocket.hpp"
 #include "boost/beast/websocket/ssl.hpp"
 
+#include "core.hpp"
 #include "url.hpp"
 
 
@@ -46,15 +47,13 @@ namespace as {
 
 	class WsClient;
 
-	using t_timespan = int64_t;
-
 	using t_wsErrorHandler =
 		std::function<void( WsClient &, int, const std::string & )>;
 
 	using t_wsHandshakeHandler = std::function<void( WsClient & )>;
 
 	using t_wsReadHandler =
-		std::function<void( WsClient &, const char *, size_t )>;
+		std::function<bool( WsClient &, const char *, size_t )>;
 
 	using t_wsStream = boost::beast::websocket::stream<
 		boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>;
@@ -101,7 +100,9 @@ namespace as {
 		void OnResolve( boost::system::error_code ec,
 			boost::asio::ip::tcp::resolver::results_type results );
 
-		void OnConnect( boost::system::error_code ec );
+		void OnConnect( boost::system::error_code ec,
+			boost::asio::ip::tcp::resolver::results_type::iterator it );
+
 		void OnSslHandshake( boost::system::error_code ec );
 		void OnHandshake( boost::system::error_code ec );
 
@@ -152,7 +153,9 @@ namespace as {
 
 		void WatchdogTimeoutMs( t_timespan t )
 		{
-			m_watchdogTimeoutMs = t;
+			if ( t != 0 ) {
+				m_watchdogTimeoutMs = t;
+			}
 		}
 	};
 

@@ -47,6 +47,7 @@ namespace as::cryptox {
 	using t_number = as::FixedNumber;
 
 	using t_exchangeClientReadyHandler = std::function<void( Client & )>;
+	using t_exchangeClientErrorHandler = std::function<void( Client & )>;
 	using t_priceBookTickerHandler =
 		std::function<void( Client &, t_price_book_ticker & )>;
 
@@ -66,9 +67,10 @@ namespace as::cryptox {
 
 		HttpsClient m_httpClient;
 		std::unique_ptr<as::WsClient> m_wsClient;
-		t_timespan m_wsTimeoutMs;
+		t_timespan m_wsTimeoutMs{ 0 };
 
 		t_exchangeClientReadyHandler m_clientReadyHandler;
+		t_exchangeClientErrorHandler m_clientErrorHandler;
 
 		std::unordered_map<Symbol, t_priceBookTickerHandler>
 			m_priceBookTickerHandlerMap;
@@ -88,7 +90,7 @@ namespace as::cryptox {
 			as::WsClient &, int, const as::t_string & ) = 0;
 
 		virtual void wsHandshakeHandler( as::WsClient & ) = 0;
-		virtual void wsReadHandler( as::WsClient &, const char *, size_t ) = 0;
+		virtual bool wsReadHandler( as::WsClient &, const char *, size_t ) = 0;
 
 		void addSymbolMapEntry(
 			const as::t_stringview & name, as::cryptox::Symbol s )
@@ -126,6 +128,7 @@ namespace as::cryptox {
 			: m_httpApiUrl( httpApiUrl )
 			, m_wsApiUrl( wsApiUrl )
 		{
+
 			initSymbolMap();
 		}
 
@@ -164,6 +167,11 @@ namespace as::cryptox {
 			}
 
 			return Symbol::UNKNOWN;
+		}
+
+		void ErrorHandler( const t_exchangeClientErrorHandler & handler )
+		{
+			m_clientErrorHandler = handler;
 		}
 	};
 

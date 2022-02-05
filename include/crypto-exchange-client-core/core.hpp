@@ -52,6 +52,7 @@ namespace as {
 	using t_char = char;
 	using t_stringview = std::string_view;
 	using t_byte = unsigned char;
+	using t_timespan = int64_t;
 
 
 	struct t_buffer {
@@ -131,15 +132,15 @@ namespace as {
 	}
 
 	inline std::vector<t_byte> hmacSha256(
-		const as::t_string & apiSecret, const as::t_string & data )
+		const as::t_stringview & secret, const as::t_string & data )
 	{
 
 		std::vector<t_byte> result( EVP_MAX_MD_SIZE );
 		unsigned bufferLen;
 
 		HMAC( EVP_sha256(),
-			apiSecret.data(),
-			static_cast<int>( apiSecret.length() ),
+			secret.data(),
+			static_cast<int>( secret.length() ),
 			reinterpret_cast<const unsigned char *>( data.c_str() ),
 			static_cast<int>( data.length() ),
 			result.data(),

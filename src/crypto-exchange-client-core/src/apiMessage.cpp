@@ -18,17 +18,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/// wsMessage.hpp
+/// apiMessage.cpp
 ///
 /// 0.0 - created (Denis Rozhkov <denis@rozhkoff.com>)
 ///
 
-#include "crypto-exchange-client-core/wsMessage.hpp"
+#include "crypto-exchange-client-core/apiMessage.hpp"
 
 
 namespace as::cryptox {
 
-	std::shared_ptr<WsMessage> WsMessage::s_unknown =
-		std::make_shared<WsMessage>( WsMessage::TypeIdUnknown );
+	std::shared_ptr<ApiMessageBase> ApiMessageBase::s_unknown =
+		std::make_shared<ApiMessageBase>( ApiMessageBase::TypeIdUnknown );
 
 }
