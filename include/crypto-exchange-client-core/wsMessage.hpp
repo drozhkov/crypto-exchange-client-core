@@ -29,7 +29,7 @@ SOFTWARE.
 
 #include <memory>
 
-#include "apiMessage.hpp"
+#include "crypto-exchange-client-core/apiMessage.hpp"
 
 
 namespace as::cryptox {

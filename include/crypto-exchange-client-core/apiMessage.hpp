@@ -68,6 +68,11 @@ namespace as::cryptox {
 		bool m_isGood = false;
 
 	public:
+		ApiMessage()
+			: ApiMessageBase( TypeIdUnknown )
+		{
+		}
+
 		ApiMessage( t_api_message_type_id typeId )
 			: ApiMessageBase( typeId )
 		{
