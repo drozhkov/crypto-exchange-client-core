@@ -70,6 +70,23 @@ namespace as {
 	// TODO
 	class FixedNumber {
 	protected:
+		inline static int64_t s_denominators[] = { INT64_C( 1 ),
+			INT64_C( 1'0 ),
+			INT64_C( 1'0'0 ),
+			INT64_C( 1'0'0'0 ),
+			INT64_C( 1'0'0'0'0 ),
+			INT64_C( 1'0'0'0'0'0 ),
+			INT64_C( 1'0'0'0'0'0'0 ),
+			INT64_C( 1'0'0'0'0'0'0'0 ),
+			INT64_C( 1'0'0'0'0'0'0'0'0 ),
+			INT64_C( 1'0'0'0'0'0'0'0'0'0 ),
+			INT64_C( 1'0'0'0'0'0'0'0'0'0'0 ),
+			INT64_C( 1'0'0'0'0'0'0'0'0'0'0'0 ),
+			INT64_C( 1'0'0'0'0'0'0'0'0'0'0'0'0 ),
+			INT64_C( 1'0'0'0'0'0'0'0'0'0'0'0'0'0 ),
+			INT64_C( 1'0'0'0'0'0'0'0'0'0'0'0'0'0'0 ),
+			INT64_C( 1'0'0'0'0'0'0'0'0'0'0'0'0'0'0'0 ) };
+
 		int64_t m_numerator;
 		int64_t m_denominator;
 		size_t m_exponent;
@@ -83,7 +100,7 @@ namespace as {
 
 			m_numerator = AS_STOLL( as::t_string( i ) + as::t_string( f ) );
 			m_exponent = f.length();
-			m_denominator = static_cast<int64_t>( std::pow( 10, m_exponent ) );
+			m_denominator = s_denominators[m_exponent];
 		}
 
 		as::t_string toString() const
