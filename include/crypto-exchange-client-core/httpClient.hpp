@@ -209,15 +209,12 @@ namespace as {
 			switch ( method ) {
 				case as::HttpMethod::GET:
 					return AS_T( "GET" );
-					break;
 
 				case as::HttpMethod::POST:
 					return AS_T( "POST" );
-					break;
 
 				case as::HttpMethod::PUT:
 					return AS_T( "PUT" );
-					break;
 
 					// case as::HttpMethod::DELETE:
 					//	return AS_T( "DELETE" );

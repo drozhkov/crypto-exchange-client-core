@@ -41,15 +41,22 @@ namespace as::cryptox {
 
 	class Client;
 	struct t_price_book_ticker;
+	struct t_order_update;
 
-	enum class Symbol { _undef, UNKNOWN, ANY, ALL, BTC_USDT };
+	enum class Symbol { _undef, UNKNOWN, ANY, ALL, BTC_USDT, KCS_USDT };
+	enum class Direction { _undef, BUY, SELL };
 
 	using t_number = as::FixedNumber;
+	using t_order_id = as::t_string;
 
 	using t_exchangeClientReadyHandler = std::function<void( Client & )>;
 	using t_exchangeClientErrorHandler = std::function<void( Client & )>;
+
 	using t_priceBookTickerHandler =
 		std::function<void( Client &, t_price_book_ticker & )>;
+
+	using t_orderUpdateHandler =
+		std::function<void( Client &, t_order_update & )>;
 
 
 	struct t_price_book_ticker {
@@ -58,6 +65,14 @@ namespace as::cryptox {
 		t_number bidQuantity;
 		t_number askPrice;
 		t_number askQuantity;
+	};
+
+	struct t_order {
+		t_order_id id;
+	};
+
+	struct t_order_update {
+		t_order_id orderId;
 	};
 
 	class Client {
@@ -74,6 +89,8 @@ namespace as::cryptox {
 
 		std::unordered_map<Symbol, t_priceBookTickerHandler>
 			m_priceBookTickerHandlerMap;
+
+		t_orderUpdateHandler m_orderUpdateHandler;
 
 		std::unordered_map<as::t_stringview, Symbol> m_symbolMap;
 		std::unordered_map<Symbol, as::t_stringview> m_symbolReverseMap;
@@ -100,11 +117,7 @@ namespace as::cryptox {
 			m_symbolReverseMap.emplace( s, name );
 		}
 
-		virtual void initSymbolMap()
-		{
-			addSymbolMapEntry( AS_T( "all" ), as::cryptox::Symbol::ALL );
-		}
-
+		virtual void initSymbolMap();
 		virtual void initWsClient();
 
 		template <typename TMap, typename TArg>
@@ -128,8 +141,6 @@ namespace as::cryptox {
 			: m_httpApiUrl( httpApiUrl )
 			, m_wsApiUrl( wsApiUrl )
 		{
-
-			initSymbolMap();
 		}
 
 		virtual ~Client() = default;
@@ -146,6 +157,18 @@ namespace as::cryptox {
 
 			m_priceBookTickerHandlerMap.emplace( symbol, handler );
 		}
+
+		virtual void subscribeOrderUpdate(
+			const t_orderUpdateHandler & handler )
+		{
+
+			m_orderUpdateHandler = handler;
+		}
+
+		virtual t_order placeOrder( Direction direction,
+			Symbol symbol,
+			const FixedNumber & price,
+			const FixedNumber & quantity ) = 0;
 
 		virtual const as::t_char * SymbolName( Symbol symbol ) const
 		{
@@ -169,9 +192,23 @@ namespace as::cryptox {
 			return Symbol::UNKNOWN;
 		}
 
-		void ErrorHandler( const t_exchangeClientErrorHandler & handler )
+		virtual const as::t_char * DirectionName( Direction direction ) const
+		{
+			switch ( direction ) {
+				case Direction::BUY:
+					return AS_T( "buy" );
+
+				case Direction::SELL:
+					return AS_T( "sell" );
+			}
+
+			return AS_T( "UNKNOWN" );
+		}
+
+		Client & ErrorHandler( const t_exchangeClientErrorHandler & handler )
 		{
 			m_clientErrorHandler = handler;
+			return *this;
 		}
 	};
 

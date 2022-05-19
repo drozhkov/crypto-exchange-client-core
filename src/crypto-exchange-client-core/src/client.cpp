@@ -28,6 +28,11 @@ SOFTWARE.
 
 namespace as::cryptox {
 
+	void Client::initSymbolMap()
+	{
+		addSymbolMapEntry( AS_T( "all" ), as::cryptox::Symbol::ALL );
+	}
+
 	void Client::initWsClient()
 	{
 		m_wsClient = std::make_unique<as::WsClient>( m_wsApiUrl );

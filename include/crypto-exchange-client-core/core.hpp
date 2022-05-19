@@ -35,6 +35,9 @@ SOFTWARE.
 #include "openssl/evp.h"
 #include "openssl/hmac.h"
 
+#include "boost/uuid/random_generator.hpp"
+#include "boost/uuid/uuid_io.hpp"
+
 
 namespace as {
 
@@ -92,6 +95,15 @@ namespace as {
 		size_t m_exponent;
 
 	public:
+		FixedNumber()
+		{
+		}
+
+		FixedNumber( const as::t_stringview & s )
+		{
+			Value( s );
+		}
+
 		void Value( const as::t_stringview & s )
 		{
 			auto dotPos = s.find( AS_T( '.' ) );
@@ -166,6 +178,12 @@ namespace as {
 		result.resize( bufferLen );
 
 		return result;
+	}
+
+	inline as::t_string uuidString()
+	{
+		static thread_local boost::uuids::random_generator generator;
+		return boost::uuids::to_string( generator() );
 	}
 
 }

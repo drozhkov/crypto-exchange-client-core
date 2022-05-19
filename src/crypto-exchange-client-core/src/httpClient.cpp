@@ -71,7 +71,8 @@ namespace as {
 		}
 
 		if ( !body.empty() ) {
-			req.set( boost::beast::http::field::body, body.data() );
+			req.body() = body;
+			req.prepare_payload();
 		}
 
 		{
@@ -105,7 +106,7 @@ namespace as {
 		const as::t_stringview & body )
 	{
 
-		return request( uri, headers, boost::beast::http::verb::post );
+		return request( uri, headers, boost::beast::http::verb::post, body );
 	}
 
 	HttpResponse PersistentHttpsClient::put( const Url & uri,
@@ -113,7 +114,7 @@ namespace as {
 		const as::t_stringview & body )
 	{
 
-		return request( uri, headers, boost::beast::http::verb::put );
+		return request( uri, headers, boost::beast::http::verb::put, body );
 	}
 
 	//
