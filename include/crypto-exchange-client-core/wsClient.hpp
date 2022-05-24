@@ -106,9 +106,9 @@ namespace as {
 		void OnSslHandshake( boost::system::error_code ec );
 		void OnHandshake( boost::system::error_code ec );
 
-		void OnWrite( boost::system::error_code ec, std::size_t bytesWritten );
-		void OnRead( boost::system::error_code ec, std::size_t bytesRead );
-		void OnPing( boost::system::error_code ec );
+		void OnWriteComplete( boost::system::error_code ec, std::size_t bytesWritten );
+		void OnReadComplete( boost::system::error_code ec, std::size_t bytesRead );
+		void OnPingComplete( boost::system::error_code ec );
 		void OnControl(
 			boost::beast::websocket::frame_type, boost::beast::string_view );
 

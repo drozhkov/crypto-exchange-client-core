@@ -43,7 +43,20 @@ namespace as::cryptox {
 	struct t_price_book_ticker;
 	struct t_order_update;
 
-	enum class Symbol { _undef, UNKNOWN, ANY, ALL, BTC_USDT, KCS_USDT };
+	enum class Coin {
+		_undef,
+		A_UNKNOWN,
+		A_ANY,
+		A_ALL,
+		BTC,
+		USDT,
+		ETH,
+		KCS,
+		TRX
+	};
+
+	enum class Symbol : size_t { _undef, A_UNKNOWN = 1024, A_ANY, A_ALL };
+
 	enum class Direction { _undef, BUY, SELL };
 
 	using t_number = as::FixedNumber;
@@ -75,6 +88,40 @@ namespace as::cryptox {
 		t_order_id orderId;
 	};
 
+	class Pair {
+	protected:
+		Coin m_base;
+		Coin m_quote;
+		as::t_string m_name;
+
+	public:
+		Pair()
+		{
+		}
+
+		Pair( Coin base, Coin quote, const as::t_string & name )
+			: m_base( base )
+			, m_quote( quote )
+			, m_name( name )
+		{
+		}
+
+		Coin Base() const
+		{
+			return m_base;
+		}
+
+		Coin Quote() const
+		{
+			return m_quote;
+		}
+
+		const as::t_string & Name() const
+		{
+			return m_name;
+		}
+	};
+
 	class Client {
 	protected:
 		as::Url m_wsApiUrl;
@@ -92,17 +139,14 @@ namespace as::cryptox {
 
 		t_orderUpdateHandler m_orderUpdateHandler;
 
+		std::unordered_map<as::t_stringview, Coin> m_coinMap;
+		std::unordered_map<Coin, as::t_stringview> m_coinReverseMap;
+
 		std::unordered_map<as::t_stringview, Symbol> m_symbolMap;
-		std::unordered_map<Symbol, as::t_stringview> m_symbolReverseMap;
+
+		std::vector<Pair> m_pairList;
 
 	protected:
-		template <typename T> static t_timespan UnixTs()
-		{
-			return std::chrono::duration_cast<T>(
-				std::chrono::system_clock::now().time_since_epoch() )
-				.count();
-		}
-
 		virtual void wsErrorHandler(
 			as::WsClient &, int, const as::t_string & ) = 0;
 
@@ -114,7 +158,25 @@ namespace as::cryptox {
 		{
 
 			m_symbolMap.emplace( name, s );
-			m_symbolReverseMap.emplace( s, name );
+		}
+
+		void addCoinMapEntry(
+			const as::t_stringview & name, as::cryptox::Coin c )
+		{
+
+			m_coinMap.emplace( name, c );
+			m_coinReverseMap.emplace( c, name );
+		}
+
+		virtual void initCoinMap()
+		{
+			addCoinMapEntry( AS_T( "UNKNOWN" ), Coin::A_UNKNOWN );
+
+			addCoinMapEntry( AS_T( "BTC" ), Coin::BTC );
+			addCoinMapEntry( AS_T( "ETH" ), Coin::ETH );
+			addCoinMapEntry( AS_T( "KCS" ), Coin::KCS );
+			addCoinMapEntry( AS_T( "TRX" ), Coin::TRX );
+			addCoinMapEntry( AS_T( "USDT" ), Coin::USDT );
 		}
 
 		virtual void initSymbolMap();
@@ -128,7 +190,7 @@ namespace as::cryptox {
 			auto it = map.find( symbol );
 
 			if ( map.end() == it ) {
-				it = map.find( Symbol::ANY );
+				it = map.find( Symbol::A_ANY );
 			}
 
 			if ( map.end() != it ) {
@@ -145,14 +207,27 @@ namespace as::cryptox {
 
 		virtual ~Client() = default;
 
-		virtual void run( const t_exchangeClientReadyHandler & handler ) = 0;
+		template <typename T> static t_timespan UnixTs()
+		{
+			return std::chrono::duration_cast<T>(
+				std::chrono::system_clock::now().time_since_epoch() )
+				.count();
+		}
+
+		virtual void run( const t_exchangeClientReadyHandler & handler )
+		{
+			initCoinMap();
+			initSymbolMap();
+
+			m_clientReadyHandler = handler;
+		}
 
 		virtual void subscribePriceBookTicker(
 			Symbol symbol, const t_priceBookTickerHandler & handler )
 		{
 
-			if ( Symbol::ALL == symbol ) {
-				symbol = Symbol::ANY;
+			if ( Symbol::A_ALL == symbol ) {
+				symbol = Symbol::A_ANY;
 			}
 
 			m_priceBookTickerHandlerMap.emplace( symbol, handler );
@@ -172,13 +247,7 @@ namespace as::cryptox {
 
 		virtual const as::t_char * SymbolName( Symbol symbol ) const
 		{
-			auto it = m_symbolReverseMap.find( symbol );
-
-			if ( m_symbolReverseMap.end() != it ) {
-				return it->second.data();
-			}
-
-			return AS_T( "UNKNOWN" );
+			return Pair( symbol ).Name().c_str();
 		}
 
 		virtual Symbol Symbol( const as::t_char * symbolName ) const
@@ -189,7 +258,38 @@ namespace as::cryptox {
 				return it->second;
 			}
 
-			return Symbol::UNKNOWN;
+			return Symbol::A_UNKNOWN;
+		}
+
+		virtual const as::t_char * CoinName( Coin coin ) const
+		{
+			auto it = m_coinReverseMap.find( coin );
+
+			if ( m_coinReverseMap.end() != it ) {
+				return it->second.data();
+			}
+
+			return CoinName( Coin::A_UNKNOWN );
+		}
+
+		virtual Coin Coin( const as::t_char * coinName ) const
+		{
+			auto it = m_coinMap.find( coinName );
+
+			if ( m_coinMap.end() != it ) {
+				return it->second;
+			}
+
+			return Coin::A_UNKNOWN;
+		}
+
+		virtual const Pair & Pair( as::cryptox::Symbol symbol ) const
+		{
+			if ( symbol >= as::cryptox::Symbol::A_UNKNOWN ) {
+				symbol = as::cryptox::Symbol::_undef;
+			}
+
+			return m_pairList[static_cast<size_t>( symbol )];
 		}
 
 		virtual const as::t_char * DirectionName( Direction direction ) const

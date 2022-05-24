@@ -93,7 +93,7 @@ namespace as {
 		AS_CALL( m_handshakeHandler, *this );
 	}
 
-	void WsClient::OnWrite(
+	void WsClient::OnWriteComplete(
 		boost::system::error_code ec, std::size_t bytesWritten )
 	{
 
@@ -105,7 +105,8 @@ namespace as {
 		}
 	}
 
-	void WsClient::OnRead( boost::system::error_code ec, std::size_t bytesRead )
+	void WsClient::OnReadComplete(
+		boost::system::error_code ec, std::size_t bytesRead )
 	{
 		if ( ec ) {
 			AS_CALL( m_errorHandler, *this, ec.value(), ec.message() );
@@ -131,7 +132,7 @@ namespace as {
 		readAsync();
 	}
 
-	void WsClient::OnPing( boost::system::error_code ec )
+	void WsClient::OnPingComplete( boost::system::error_code ec )
 	{
 		if ( ec ) {
 			AS_CALL( m_errorHandler, *this, ec.value(), ec.message() );
@@ -194,7 +195,7 @@ namespace as {
 	void WsClient::readAsync()
 	{
 		m_stream.async_read( m_buffer,
-			std::bind( &WsClient::OnRead,
+			std::bind( &WsClient::OnReadComplete,
 				this,
 				std::placeholders::_1,
 				std::placeholders::_2 ) );
@@ -215,7 +216,7 @@ namespace as {
 	{
 		std::lock_guard<std::mutex> lock( m_streamWriteSync );
 		m_stream.async_write( boost::asio::buffer( data, size ),
-			std::bind( &WsClient::OnWrite,
+			std::bind( &WsClient::OnWriteComplete,
 				this,
 				std::placeholders::_1,
 				std::placeholders::_2 ) );
@@ -225,7 +226,8 @@ namespace as {
 	{
 		std::lock_guard<std::mutex> lock( m_streamPingSync );
 		m_stream.async_ping( { static_cast<const char *>( data ), size },
-			std::bind( &WsClient::OnPing, this, std::placeholders::_1 ) );
+			std::bind(
+				&WsClient::OnPingComplete, this, std::placeholders::_1 ) );
 	}
 
 }

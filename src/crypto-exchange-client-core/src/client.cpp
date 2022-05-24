@@ -30,7 +30,7 @@ namespace as::cryptox {
 
 	void Client::initSymbolMap()
 	{
-		addSymbolMapEntry( AS_T( "all" ), as::cryptox::Symbol::ALL );
+		addSymbolMapEntry( AS_T( "all" ), as::cryptox::Symbol::A_ALL );
 	}
 
 	void Client::initWsClient()

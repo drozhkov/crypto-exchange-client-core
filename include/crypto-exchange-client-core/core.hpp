@@ -59,12 +59,12 @@ namespace as {
 
 
 	struct t_buffer {
-		t_byte * ptr;
+		const t_byte * ptr;
 		size_t len;
 
 	public:
-		t_buffer( void * ptr, size_t len )
-			: ptr( static_cast<t_byte *>( ptr ) )
+		t_buffer( const void * ptr, size_t len )
+			: ptr( static_cast<const t_byte *>( ptr ) )
 			, len( len )
 		{
 		}
@@ -90,9 +90,9 @@ namespace as {
 			INT64_C( 1'0'0'0'0'0'0'0'0'0'0'0'0'0'0 ),
 			INT64_C( 1'0'0'0'0'0'0'0'0'0'0'0'0'0'0'0 ) };
 
-		int64_t m_numerator;
-		int64_t m_denominator;
-		size_t m_exponent;
+		int64_t m_numerator{ INT64_C( 0 ) };
+		int64_t m_denominator{ INT64_C( 0 ) };
+		size_t m_exponent{ 0 };
 
 	public:
 		FixedNumber()
@@ -117,6 +117,10 @@ namespace as {
 
 		as::t_string toString() const
 		{
+			if ( INT64_C( 0 ) == m_denominator ) {
+				return AS_T( "NaN" );
+			}
+
 			auto n = AS_TOSTRING( m_numerator );
 
 			if ( n.length() <= m_exponent ) {
@@ -126,7 +130,29 @@ namespace as {
 
 			auto i = AS_TOSTRING( m_numerator / m_denominator );
 
-			return ( i + '.' + n.substr( i.length() ) );
+			return ( i + AS_T( '.' ) + n.substr( i.length() ) );
+		}
+
+		FixedNumber div( double d ) const
+		{
+			FixedNumber result;
+			result.m_numerator = static_cast<int64_t>( m_numerator / d );
+			result.m_exponent = m_exponent;
+			result.m_denominator = m_denominator;
+
+			return result;
+		}
+
+		FixedNumber sub( double s ) const
+		{
+			FixedNumber result;
+			result.m_numerator =
+				m_numerator - static_cast<int64_t>( s * m_denominator );
+
+			result.m_exponent = m_exponent;
+			result.m_denominator = m_denominator;
+
+			return result;
 		}
 
 		double Value() const
@@ -135,7 +161,7 @@ namespace as {
 		}
 	};
 
-	inline t_string toHex( t_buffer & buffer )
+	inline t_string toHex( const t_buffer & buffer )
 	{
 		static t_char hex[] = AS_T( "0123456789abcdef" );
 
@@ -168,6 +194,26 @@ namespace as {
 		unsigned bufferLen;
 
 		HMAC( EVP_sha256(),
+			secret.data(),
+			static_cast<int>( secret.length() ),
+			reinterpret_cast<const unsigned char *>( data.c_str() ),
+			static_cast<int>( data.length() ),
+			result.data(),
+			&bufferLen );
+
+		result.resize( bufferLen );
+
+		return result;
+	}
+
+	inline std::vector<t_byte> hmacSha512(
+		const as::t_stringview & secret, const as::t_string & data )
+	{
+
+		std::vector<t_byte> result( EVP_MAX_MD_SIZE );
+		unsigned bufferLen;
+
+		HMAC( EVP_sha512(),
 			secret.data(),
 			static_cast<int>( secret.length() ),
 			reinterpret_cast<const unsigned char *>( data.c_str() ),
