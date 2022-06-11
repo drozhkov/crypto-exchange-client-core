@@ -55,7 +55,7 @@ namespace as::cryptox {
 		TRX
 	};
 
-	enum class Symbol : size_t { _undef, A_UNKNOWN = 1024, A_ANY, A_ALL };
+	enum class Symbol : size_t { _undef = 0, A_UNKNOWN = 4096, A_ANY, A_ALL };
 
 	enum class Direction { _undef, BUY, SELL };
 
@@ -93,6 +93,11 @@ namespace as::cryptox {
 		Coin m_base;
 		Coin m_quote;
 		as::t_string m_name;
+		FixedNumber m_baseMinSize;
+		FixedNumber m_quoteMinSize;
+		FixedNumber m_baseIncrement;
+		FixedNumber m_quoteIncrement;
+		FixedNumber m_priceIncrement;
 
 	public:
 		Pair()
@@ -103,6 +108,25 @@ namespace as::cryptox {
 			: m_base( base )
 			, m_quote( quote )
 			, m_name( name )
+		{
+		}
+
+		Pair( Coin base,
+			Coin quote,
+			const as::t_string & name,
+			const FixedNumber & baseMinSize,
+			const FixedNumber & quoteMinSize,
+			const FixedNumber & baseIncrement,
+			const FixedNumber & quoteIncrement,
+			const FixedNumber & priceIncrement )
+			: m_base( base )
+			, m_quote( quote )
+			, m_name( name )
+			, m_baseMinSize( baseMinSize )
+			, m_quoteMinSize( quoteMinSize )
+			, m_baseIncrement( baseIncrement )
+			, m_quoteIncrement( quoteIncrement )
+			, m_priceIncrement( priceIncrement )
 		{
 		}
 
@@ -119,6 +143,31 @@ namespace as::cryptox {
 		const as::t_string & Name() const
 		{
 			return m_name;
+		}
+
+		const FixedNumber & BaseMinSize() const
+		{
+			return m_baseMinSize;
+		}
+
+		const FixedNumber & QuoteMinSize() const
+		{
+			return m_quoteMinSize;
+		}
+
+		const FixedNumber & BaseIncrement() const
+		{
+			return m_baseIncrement;
+		}
+
+		const FixedNumber & QuoteIncrement() const
+		{
+			return m_quoteIncrement;
+		}
+
+		const FixedNumber & PriceIncrement() const
+		{
+			return m_priceIncrement;
 		}
 	};
 
@@ -142,7 +191,7 @@ namespace as::cryptox {
 		std::unordered_map<as::t_stringview, Coin> m_coinMap;
 		std::unordered_map<Coin, as::t_stringview> m_coinReverseMap;
 
-		std::unordered_map<as::t_stringview, Symbol> m_symbolMap;
+		std::unordered_map<as::t_string, Symbol> m_symbolMap;
 
 		std::vector<Pair> m_pairList;
 
@@ -214,6 +263,8 @@ namespace as::cryptox {
 				.count();
 		}
 
+		/// @brief 
+		/// @param handler 
 		virtual void run( const t_exchangeClientReadyHandler & handler )
 		{
 			initCoinMap();
@@ -222,6 +273,9 @@ namespace as::cryptox {
 			m_clientReadyHandler = handler;
 		}
 
+		/// @brief 
+		/// @param symbol 
+		/// @param handler 
 		virtual void subscribePriceBookTicker(
 			Symbol symbol, const t_priceBookTickerHandler & handler )
 		{
@@ -233,6 +287,8 @@ namespace as::cryptox {
 			m_priceBookTickerHandlerMap.emplace( symbol, handler );
 		}
 
+		/// @brief 
+		/// @param handler 
 		virtual void subscribeOrderUpdate(
 			const t_orderUpdateHandler & handler )
 		{
@@ -240,16 +296,32 @@ namespace as::cryptox {
 			m_orderUpdateHandler = handler;
 		}
 
+		/// @brief 
+		/// @param direction 
+		/// @param symbol 
+		/// @param price 
+		/// @param quantity 
+		/// @return 
 		virtual t_order placeOrder( Direction direction,
 			Symbol symbol,
 			const FixedNumber & price,
 			const FixedNumber & quantity ) = 0;
 
+		/// @brief 
+		/// @param symbol 
+		/// @return 
 		virtual const as::t_char * SymbolName( Symbol symbol ) const
 		{
+			if ( Symbol::A_ALL == symbol ) {
+				return AS_T( "all" );
+			}
+
 			return Pair( symbol ).Name().c_str();
 		}
 
+		/// @brief 
+		/// @param symbolName 
+		/// @return 
 		virtual Symbol Symbol( const as::t_char * symbolName ) const
 		{
 			auto it = m_symbolMap.find( symbolName );
@@ -261,6 +333,9 @@ namespace as::cryptox {
 			return Symbol::A_UNKNOWN;
 		}
 
+		/// @brief 
+		/// @param coin 
+		/// @return 
 		virtual const as::t_char * CoinName( Coin coin ) const
 		{
 			auto it = m_coinReverseMap.find( coin );
@@ -272,6 +347,9 @@ namespace as::cryptox {
 			return CoinName( Coin::A_UNKNOWN );
 		}
 
+		/// @brief 
+		/// @param coinName 
+		/// @return 
 		virtual Coin Coin( const as::t_char * coinName ) const
 		{
 			auto it = m_coinMap.find( coinName );
@@ -283,6 +361,9 @@ namespace as::cryptox {
 			return Coin::A_UNKNOWN;
 		}
 
+		/// @brief 
+		/// @param symbol 
+		/// @return 
 		virtual const Pair & Pair( as::cryptox::Symbol symbol ) const
 		{
 			if ( symbol >= as::cryptox::Symbol::A_UNKNOWN ) {
@@ -292,6 +373,9 @@ namespace as::cryptox {
 			return m_pairList[static_cast<size_t>( symbol )];
 		}
 
+		/// @brief 
+		/// @param direction 
+		/// @return 
 		virtual const as::t_char * DirectionName( Direction direction ) const
 		{
 			switch ( direction ) {
@@ -305,6 +389,9 @@ namespace as::cryptox {
 			return AS_T( "UNKNOWN" );
 		}
 
+		/// @brief 
+		/// @param handler 
+		/// @return 
 		Client & ErrorHandler( const t_exchangeClientErrorHandler & handler )
 		{
 			m_clientErrorHandler = handler;
