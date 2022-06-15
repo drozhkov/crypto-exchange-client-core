@@ -107,7 +107,7 @@ namespace as {
 		{
 		}
 
-		HttpResponse( as::t_string & text )
+		HttpResponse( const as::t_string & text )
 			: m_text( std::move( text ) )
 		{
 		}

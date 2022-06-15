@@ -29,6 +29,7 @@ SOFTWARE.
 
 #include <memory>
 #include <atomic>
+#include <climits>
 
 
 namespace as::cryptox {

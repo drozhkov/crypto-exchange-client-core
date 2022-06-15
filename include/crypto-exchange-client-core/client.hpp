@@ -263,8 +263,8 @@ namespace as::cryptox {
 				.count();
 		}
 
-		/// @brief 
-		/// @param handler 
+		/// @brief
+		/// @param handler
 		virtual void run( const t_exchangeClientReadyHandler & handler )
 		{
 			initCoinMap();
@@ -273,9 +273,9 @@ namespace as::cryptox {
 			m_clientReadyHandler = handler;
 		}
 
-		/// @brief 
-		/// @param symbol 
-		/// @param handler 
+		/// @brief
+		/// @param symbol
+		/// @param handler
 		virtual void subscribePriceBookTicker(
 			Symbol symbol, const t_priceBookTickerHandler & handler )
 		{
@@ -287,8 +287,8 @@ namespace as::cryptox {
 			m_priceBookTickerHandlerMap.emplace( symbol, handler );
 		}
 
-		/// @brief 
-		/// @param handler 
+		/// @brief
+		/// @param handler
 		virtual void subscribeOrderUpdate(
 			const t_orderUpdateHandler & handler )
 		{
@@ -296,33 +296,33 @@ namespace as::cryptox {
 			m_orderUpdateHandler = handler;
 		}
 
-		/// @brief 
-		/// @param direction 
-		/// @param symbol 
-		/// @param price 
-		/// @param quantity 
-		/// @return 
+		/// @brief
+		/// @param direction
+		/// @param symbol
+		/// @param price
+		/// @param quantity
+		/// @return
 		virtual t_order placeOrder( Direction direction,
 			Symbol symbol,
 			const FixedNumber & price,
 			const FixedNumber & quantity ) = 0;
 
-		/// @brief 
-		/// @param symbol 
-		/// @return 
-		virtual const as::t_char * SymbolName( Symbol symbol ) const
+		/// @brief
+		/// @param symbol
+		/// @return
+		virtual const as::t_char * toName( Symbol symbol ) const
 		{
 			if ( Symbol::A_ALL == symbol ) {
 				return AS_T( "all" );
 			}
 
-			return Pair( symbol ).Name().c_str();
+			return toPair( symbol ).Name().c_str();
 		}
 
-		/// @brief 
-		/// @param symbolName 
-		/// @return 
-		virtual Symbol Symbol( const as::t_char * symbolName ) const
+		/// @brief
+		/// @param symbolName
+		/// @return
+		virtual ::as::cryptox::Symbol toSymbol( const as::t_char * symbolName )
 		{
 			auto it = m_symbolMap.find( symbolName );
 
@@ -330,13 +330,13 @@ namespace as::cryptox {
 				return it->second;
 			}
 
-			return Symbol::A_UNKNOWN;
+			return ::as::cryptox::Symbol::A_UNKNOWN;
 		}
 
-		/// @brief 
-		/// @param coin 
-		/// @return 
-		virtual const as::t_char * CoinName( Coin coin ) const
+		/// @brief
+		/// @param coin
+		/// @return
+		virtual const as::t_char * toName( Coin coin ) const
 		{
 			auto it = m_coinReverseMap.find( coin );
 
@@ -344,13 +344,13 @@ namespace as::cryptox {
 				return it->second.data();
 			}
 
-			return CoinName( Coin::A_UNKNOWN );
+			return toName( Coin::A_UNKNOWN );
 		}
 
-		/// @brief 
-		/// @param coinName 
-		/// @return 
-		virtual Coin Coin( const as::t_char * coinName ) const
+		/// @brief
+		/// @param coinName
+		/// @return
+		virtual ::as::cryptox::Coin toCoin( const as::t_char * coinName ) const
 		{
 			auto it = m_coinMap.find( coinName );
 
@@ -358,14 +358,16 @@ namespace as::cryptox {
 				return it->second;
 			}
 
-			return Coin::A_UNKNOWN;
+			return ::as::cryptox::Coin::A_UNKNOWN;
 		}
 
-		/// @brief 
-		/// @param symbol 
-		/// @return 
-		virtual const Pair & Pair( as::cryptox::Symbol symbol ) const
+		/// @brief
+		/// @param symbol
+		/// @return
+		virtual const ::as::cryptox::Pair & toPair(
+			as::cryptox::Symbol symbol ) const
 		{
+
 			if ( symbol >= as::cryptox::Symbol::A_UNKNOWN ) {
 				symbol = as::cryptox::Symbol::_undef;
 			}
@@ -373,10 +375,10 @@ namespace as::cryptox {
 			return m_pairList[static_cast<size_t>( symbol )];
 		}
 
-		/// @brief 
-		/// @param direction 
-		/// @return 
-		virtual const as::t_char * DirectionName( Direction direction ) const
+		/// @brief
+		/// @param direction
+		/// @return
+		virtual const as::t_char * toName( Direction direction ) const
 		{
 			switch ( direction ) {
 				case Direction::BUY:
@@ -389,9 +391,9 @@ namespace as::cryptox {
 			return AS_T( "UNKNOWN" );
 		}
 
-		/// @brief 
-		/// @param handler 
-		/// @return 
+		/// @brief
+		/// @param handler
+		/// @return
 		Client & ErrorHandler( const t_exchangeClientErrorHandler & handler )
 		{
 			m_clientErrorHandler = handler;
