@@ -175,7 +175,7 @@ namespace as {
 		return out;
 	}
 
-	inline as::t_string toBase64( t_buffer & buffer )
+	inline as::t_string toBase64( const t_buffer & buffer )
 	{
 		t_string result( 4 * ( ( buffer.len + 2 ) / 3 ), 0 );
 		int len = EVP_EncodeBlock( reinterpret_cast<unsigned char *>(
