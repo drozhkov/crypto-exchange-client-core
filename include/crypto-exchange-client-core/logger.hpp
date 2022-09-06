@@ -31,7 +31,37 @@ SOFTWARE.
 
 
 namespace as {
-}
+
+#if 1
+#define AS_LOG_TRACE( m )
+#define AS_LOG_DEBUG( m )
+#else
+#define AS_LOG_DEBUG( a_m )                                                    \
+	std::cout << __FILE__ << AS_T( ", " ) << __func__ << AS_T( ':' )           \
+			  << __LINE__ << AS_T( ":: " ) << a_m
+
+#define AS_LOG_TRACE( a_m )                                                    \
+	std::cout << __FILE__ << AS_T( ", " ) << __func__ << AS_T( ':' )           \
+			  << __LINE__ << AS_T( ":: " ) << a_m
+#endif
+
+#define AS_LOG_INFO( a_m )                                                     \
+	std::cout << __FILE__ << AS_T( ", " ) << __func__ << AS_T( ':' )           \
+			  << __LINE__ << ":: " << a_m
+
+#define AS_LOG_ERROR( a_m )                                                    \
+	std::cerr << __FILE__ << AS_T( ", " ) << __func__ << AS_T( ':' )           \
+			  << __LINE__ << AS_T( ":: " ) << a_m
+
+#define AS_LOG_TRACE_LINE( a_m ) AS_LOG_TRACE( a_m << std::endl )
+
+#define AS_LOG_DEBUG_LINE( a_m ) AS_LOG_DEBUG( a_m << std::endl )
+
+#define AS_LOG_INFO_LINE( a_m ) AS_LOG_INFO( a_m << std::endl )
+
+#define AS_LOG_ERROR_LINE( a_m ) AS_LOG_ERROR( a_m << std::endl )
+
+} // namespace as
 
 
 #endif

@@ -24,6 +24,7 @@ SOFTWARE.
 ///
 
 #include "crypto-exchange-client-core/core.hpp"
+#include "crypto-exchange-client-core/logger.hpp"
 
 #include "crypto-exchange-client-core/wsClient.hpp"
 
@@ -108,6 +109,7 @@ namespace as {
 	void WsClient::OnReadComplete(
 		boost::system::error_code ec, std::size_t bytesRead )
 	{
+
 		if ( ec ) {
 			AS_CALL( m_errorHandler, *this, ec.value(), ec.message() );
 			return;
@@ -151,6 +153,8 @@ namespace as {
 	void WsClient::OnControl( boost::beast::websocket::frame_type type,
 		boost::beast::string_view payload )
 	{
+
+		AS_LOG_TRACE_LINE( payload );
 
 		refreshLastActivityTs();
 
@@ -230,4 +234,4 @@ namespace as {
 				&WsClient::OnPingComplete, this, std::placeholders::_1 ) );
 	}
 
-}
+} // namespace as

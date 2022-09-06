@@ -64,6 +64,7 @@ namespace as {
 		t_timespan m_watchdogTimeoutMs = 15 * 1000;
 
 		Url m_url;
+		size_t m_index;
 
 		boost::asio::io_context m_io;
 		boost::asio::ssl::context m_ctx;
@@ -106,8 +107,12 @@ namespace as {
 		void OnSslHandshake( boost::system::error_code ec );
 		void OnHandshake( boost::system::error_code ec );
 
-		void OnWriteComplete( boost::system::error_code ec, std::size_t bytesWritten );
-		void OnReadComplete( boost::system::error_code ec, std::size_t bytesRead );
+		void OnWriteComplete(
+			boost::system::error_code ec, std::size_t bytesWritten );
+
+		void OnReadComplete(
+			boost::system::error_code ec, std::size_t bytesRead );
+
 		void OnPingComplete( boost::system::error_code ec );
 		void OnControl(
 			boost::beast::websocket::frame_type, boost::beast::string_view );
@@ -115,8 +120,9 @@ namespace as {
 		void OnClose( boost::system::error_code ec );
 
 	public:
-		WsClient( const Url & url )
+		WsClient( const Url & url, size_t index )
 			: m_url( url )
+			, m_index( index )
 			, m_ctx( boost::asio::ssl::context::method::tls_client )
 			, m_stream( m_io, m_ctx )
 		{
@@ -157,9 +163,19 @@ namespace as {
 				m_watchdogTimeoutMs = t;
 			}
 		}
+
+		size_t Index() const
+		{
+			return m_index;
+		}
+
+		bool IsOpen() const
+		{
+			return m_stream.is_open();
+		}
 	};
 
-}
+} // namespace as
 
 
 #endif

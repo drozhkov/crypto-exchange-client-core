@@ -31,6 +31,7 @@ SOFTWARE.
 #include <string_view>
 #include <cmath>
 #include <vector>
+#include <atomic>
 
 #include "openssl/evp.h"
 #include "openssl/hmac.h"
@@ -67,6 +68,28 @@ namespace as {
 			: ptr( static_cast<const t_byte *>( ptr ) )
 			, len( len )
 		{
+		}
+	};
+
+	class Spinlock {
+	protected:
+		std::atomic_flag m_lock = ATOMIC_FLAG_INIT;
+
+	public:
+		~Spinlock()
+		{
+			unlock();
+		}
+
+		void lock()
+		{
+			while ( m_lock.test_and_set() )
+				;
+		}
+
+		void unlock()
+		{
+			m_lock.clear();
 		}
 	};
 
@@ -113,6 +136,13 @@ namespace as {
 			m_numerator = AS_STOLL( as::t_string( i ) + as::t_string( f ) );
 			m_exponent = f.length();
 			m_denominator = s_denominators[m_exponent];
+		}
+
+		void Value( double v )
+		{
+			m_exponent = 8;
+			m_denominator = s_denominators[m_exponent];
+			m_numerator = static_cast<int64_t>( v * m_denominator );
 		}
 
 		as::t_string toString() const
@@ -232,7 +262,7 @@ namespace as {
 		return boost::uuids::to_string( generator() );
 	}
 
-}
+} // namespace as
 
 
 #endif

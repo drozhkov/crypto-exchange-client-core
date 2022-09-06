@@ -189,6 +189,7 @@ namespace as {
 		template <typename F>
 		as::t_string makeRequest( const Url & uri, const F & f )
 		{
+
 			bool forceNew = false;
 
 			while ( true ) {

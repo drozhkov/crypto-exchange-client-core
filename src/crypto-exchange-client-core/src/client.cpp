@@ -33,25 +33,58 @@ namespace as::cryptox {
 		addSymbolMapEntry( AS_T( "all" ), as::cryptox::Symbol::A_ALL );
 	}
 
-	void Client::initWsClient()
+	void Client::initWsClient( size_t index )
 	{
-		m_wsClient = std::make_unique<as::WsClient>( m_wsApiUrl );
-		m_wsClient->ErrorHandler( std::bind( &Client::wsErrorHandler,
+		m_wsClients[index] =
+			std::make_unique<as::WsClient>( m_wsApiUrls[index], index );
+
+		m_wsClients[index]->ErrorHandler( std::bind( &Client::wsErrorHandler,
 			this,
 			std::placeholders::_1,
 			std::placeholders::_2,
 			std::placeholders::_3 ) );
 
-		m_wsClient->HandshakeHandler( std::bind(
+		m_wsClients[index]->HandshakeHandler( std::bind(
 			&Client::wsHandshakeHandler, this, std::placeholders::_1 ) );
 
-		m_wsClient->ReadHandler( std::bind( &Client::wsReadHandler,
+		m_wsClients[index]->ReadHandler( std::bind( &Client::wsReadHandler,
 			this,
 			std::placeholders::_1,
 			std::placeholders::_2,
 			std::placeholders::_3 ) );
 
-		m_wsClient->WatchdogTimeoutMs( m_wsTimeoutMs );
+		m_wsClients[index]->WatchdogTimeoutMs( m_wsTimeoutMs );
 	}
 
-}
+	void Client::run( const t_exchangeClientReadyHandler & handler,
+		const std::function<void( size_t )> & beforeRun )
+	{
+
+		initCoinMap();
+		initSymbolMap();
+
+		m_clientReadyHandler = handler;
+
+		for ( size_t i = 0; i < m_wsApiUrls.size(); ++i ) {
+			std::thread t( [this, i, beforeRun] {
+				while ( true ) {
+					try {
+						initWsClient( i );
+						beforeRun( i );
+						m_wsClients[i]->run();
+					}
+					catch ( const std::exception & x ) {
+						AS_LOG_ERROR_LINE( x.what() );
+					}
+				}
+			} );
+
+			m_wsClientsThreads[i].swap( t );
+		}
+
+		for ( size_t i = 0; i < m_wsClientsThreads.size(); ++i ) {
+			m_wsClientsThreads[i].join();
+		}
+	}
+
+} // namespace as::cryptox

@@ -31,15 +31,17 @@ SOFTWARE.
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <initializer_list>
+#include <thread>
 
 #include "core.hpp"
+#include "logger.hpp"
 #include "wsClient.hpp"
 #include "httpClient.hpp"
 
 
 namespace as::cryptox {
 
-	class Client;
 	struct t_price_book_ticker;
 	struct t_order_update;
 
@@ -61,15 +63,6 @@ namespace as::cryptox {
 
 	using t_number = as::FixedNumber;
 	using t_order_id = as::t_string;
-
-	using t_exchangeClientReadyHandler = std::function<void( Client & )>;
-	using t_exchangeClientErrorHandler = std::function<void( Client & )>;
-
-	using t_priceBookTickerHandler =
-		std::function<void( Client &, t_price_book_ticker & )>;
-
-	using t_orderUpdateHandler =
-		std::function<void( Client &, t_order_update & )>;
 
 
 	struct t_price_book_ticker {
@@ -172,13 +165,31 @@ namespace as::cryptox {
 	};
 
 	class Client {
+	public:
+		/// @brief
+		using t_exchangeClientReadyHandler =
+			std::function<void( Client &, size_t wsClientIndex )>;
+
+		/// @brief
+		using t_exchangeClientErrorHandler =
+			std::function<void( Client &, size_t wsClientIndex )>;
+
+		/// @brief
+		using t_priceBookTickerHandler = std::function<void(
+			Client &, size_t wsClientIndex, t_price_book_ticker & )>;
+
+		/// @brief
+		using t_orderUpdateHandler = std::function<void(
+			Client &, size_t wsClientIndex, t_order_update & )>;
+
 	protected:
-		as::Url m_wsApiUrl;
-		as::Url m_httpApiUrl;
+		std::vector<as::Url> m_wsApiUrls;
+		std::vector<as::Url> m_httpApiUrls;
 
 		HttpsClient m_httpClient;
-		std::unique_ptr<as::WsClient> m_wsClient;
+		std::vector<std::unique_ptr<as::WsClient>> m_wsClients;
 		t_timespan m_wsTimeoutMs{ 0 };
+		std::vector<std::thread> m_wsClientsThreads;
 
 		t_exchangeClientReadyHandler m_clientReadyHandler;
 		t_exchangeClientErrorHandler m_clientErrorHandler;
@@ -192,6 +203,8 @@ namespace as::cryptox {
 		std::unordered_map<Coin, as::t_stringview> m_coinReverseMap;
 
 		std::unordered_map<as::t_string, Symbol> m_symbolMap;
+		std::unordered_map<Coin, std::unordered_map<Coin, Symbol>>
+			m_coinSymbolMap;
 
 		std::vector<Pair> m_pairList;
 
@@ -207,6 +220,16 @@ namespace as::cryptox {
 		{
 
 			m_symbolMap.emplace( name, s );
+
+			if ( s < Symbol::A_UNKNOWN ) {
+				const auto & pair = m_pairList[static_cast<size_t>( s )];
+
+				if ( pair.Base() != Coin::A_UNKNOWN &&
+					pair.Quote() != Coin::A_UNKNOWN ) {
+
+					m_coinSymbolMap[pair.Base()][pair.Quote()] = s;
+				}
+			}
 		}
 
 		void addCoinMapEntry(
@@ -229,11 +252,11 @@ namespace as::cryptox {
 		}
 
 		virtual void initSymbolMap();
-		virtual void initWsClient();
+		virtual void initWsClient( size_t index );
 
 		template <typename TMap, typename TArg>
 		void callSymbolHandler(
-			as::cryptox::Symbol symbol, TMap & map, TArg & arg )
+			as::cryptox::Symbol symbol, TMap & map, size_t index, TArg & arg )
 		{
 
 			auto it = map.find( symbol );
@@ -243,15 +266,37 @@ namespace as::cryptox {
 			}
 
 			if ( map.end() != it ) {
-				it->second( *this, arg );
+				it->second( *this, index, arg );
 			}
 		}
 
-	public:
-		Client( const as::t_string & httpApiUrl, const as::t_string & wsApiUrl )
-			: m_httpApiUrl( httpApiUrl )
-			, m_wsApiUrl( wsApiUrl )
+		template <typename TResult, typename TFunc>
+		std::pair<bool, TResult> callWsClient(
+			const size_t index, const TFunc & func )
 		{
+
+			if ( !m_wsClients[index] || !m_wsClients[index]->IsOpen() ) {
+				return ( std::pair<bool, TResult>( false, TResult() ) );
+			}
+
+			return ( std::pair<bool, TResult>(
+				true, func( m_wsClients[index].get() ) ) );
+		}
+
+	public:
+		Client( const std::initializer_list<as::t_string> & httpApiUrls,
+			const std::initializer_list<as::t_string> & wsApiUrls )
+		{
+			for ( const auto & httpApiUrl : httpApiUrls ) {
+				m_httpApiUrls.emplace_back( httpApiUrl );
+			}
+
+			for ( const auto & wsApiUrl : wsApiUrls ) {
+				m_wsApiUrls.emplace_back( wsApiUrl );
+			}
+
+			m_wsClients.resize( wsApiUrls.size() );
+			m_wsClientsThreads.resize( wsApiUrls.size() );
 		}
 
 		virtual ~Client() = default;
@@ -265,26 +310,24 @@ namespace as::cryptox {
 
 		/// @brief
 		/// @param handler
-		virtual void run( const t_exchangeClientReadyHandler & handler )
-		{
-			initCoinMap();
-			initSymbolMap();
-
-			m_clientReadyHandler = handler;
-		}
+		virtual void run(
+			const t_exchangeClientReadyHandler & handler,
+			const std::function<void( size_t )> & beforeRun = []( size_t ) {} );
 
 		/// @brief
 		/// @param symbol
 		/// @param handler
-		virtual void subscribePriceBookTicker(
-			Symbol symbol, const t_priceBookTickerHandler & handler )
+		virtual bool subscribePriceBookTicker( size_t wsClientIndex,
+			Symbol symbol,
+			const t_priceBookTickerHandler & handler )
 		{
 
 			if ( Symbol::A_ALL == symbol ) {
 				symbol = Symbol::A_ANY;
 			}
 
-			m_priceBookTickerHandlerMap.emplace( symbol, handler );
+			return (
+				m_priceBookTickerHandlerMap.emplace( symbol, handler ).second );
 		}
 
 		/// @brief
@@ -331,6 +374,14 @@ namespace as::cryptox {
 			}
 
 			return ::as::cryptox::Symbol::A_UNKNOWN;
+		}
+
+		virtual ::as::cryptox::Symbol toSymbol( Coin base, Coin quote )
+		{
+			auto s = m_coinSymbolMap[base][quote];
+
+			return (
+				s == Symbol::_undef ? ::as::cryptox::Symbol::A_UNKNOWN : s );
 		}
 
 		/// @brief
@@ -401,7 +452,7 @@ namespace as::cryptox {
 		}
 	};
 
-}
+} // namespace as::cryptox
 
 
 #endif
