@@ -193,7 +193,7 @@ namespace as {
 
 	inline t_string toHex( const t_buffer & buffer )
 	{
-		static t_char hex[] = AS_T( "0123456789abcdef" );
+		static t_char hex[] = AS_T( "0123456789ABCDEF" );
 
 		t_string out( buffer.len * 2, 0 );
 

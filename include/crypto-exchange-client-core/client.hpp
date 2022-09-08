@@ -333,7 +333,7 @@ namespace as::cryptox {
 		/// @brief
 		/// @param handler
 		virtual void subscribeOrderUpdate(
-			const t_orderUpdateHandler & handler )
+			size_t wsClientIndex, const t_orderUpdateHandler & handler )
 		{
 
 			m_orderUpdateHandler = handler;

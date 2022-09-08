@@ -53,6 +53,25 @@ namespace as {
 			parse( *this, uri.data() );
 		}
 
+		static as::t_string encode( const t_stringview & s )
+		{
+			as::t_string result;
+
+			for ( size_t i = 0; i < s.length(); ++i ) {
+				auto ch = s[i];
+
+				if ( AS_T( ':' ) == ch ) {
+					result.append( 1, AS_T( '%' ) );
+					result.append( toHex( { s.data() + i, 1 } ) );
+				}
+				else {
+					result.append( 1, ch );
+				}
+			}
+
+			return result;
+		}
+
 		static void parse( Url & out, const t_stringview & s )
 		{
 			out.m_uri = s;
@@ -154,7 +173,7 @@ namespace as {
 		}
 	};
 
-}
+} // namespace as
 
 
 #endif
