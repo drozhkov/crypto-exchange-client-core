@@ -284,8 +284,8 @@ namespace as::cryptox {
 		}
 
 	public:
-		Client( const std::initializer_list<as::t_string> & httpApiUrls,
-			const std::initializer_list<as::t_string> & wsApiUrls )
+		Client( const std::initializer_list<as::t_stringview> & httpApiUrls,
+			const std::initializer_list<as::t_stringview> & wsApiUrls )
 		{
 			for ( const auto & httpApiUrl : httpApiUrls ) {
 				m_httpApiUrls.emplace_back( httpApiUrl );
