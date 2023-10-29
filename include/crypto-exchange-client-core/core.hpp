@@ -194,10 +194,8 @@ namespace as {
 		}
 	};
 
-	inline t_string toHex( const t_buffer & buffer )
+	inline t_string toHex( const t_buffer & buffer, const t_char * hex )
 	{
-		static t_char hex[] = AS_T( "0123456789ABCDEF" );
-
 		t_string out( buffer.len * 2, 0 );
 
 		for ( size_t i = 0; i < buffer.len; i++ ) {
@@ -206,6 +204,18 @@ namespace as {
 		}
 
 		return out;
+	}
+
+	inline t_string toHex( const t_buffer & buffer )
+	{
+		static t_char hex[] = AS_T( "0123456789ABCDEF" );
+		return toHex( buffer, hex );
+	}
+
+	inline t_string toHexLowerCase( const t_buffer & buffer )
+	{
+		static t_char hex[] = AS_T( "0123456789abcdef" );
+		return toHex( buffer, hex );
 	}
 
 	inline as::t_string toBase64( const t_buffer & buffer )
