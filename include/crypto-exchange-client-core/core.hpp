@@ -130,8 +130,11 @@ namespace as {
 		void Value( const as::t_stringview & s )
 		{
 			auto dotPos = s.find( AS_T( '.' ) );
-			auto i = s.substr( 0, dotPos );
-			auto f = s.substr( dotPos + 1 );
+			auto i =
+				as::t_stringview::npos == dotPos ? s : s.substr( 0, dotPos );
+
+			auto f = as::t_stringview::npos == dotPos ? AS_T( "" )
+													  : s.substr( dotPos + 1 );
 
 			m_numerator = AS_STOLL( as::t_string( i ) + as::t_string( f ) );
 			m_exponent = f.length();
