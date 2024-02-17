@@ -33,6 +33,7 @@ SOFTWARE.
 #include <unordered_map>
 #include <initializer_list>
 #include <thread>
+#include <map>
 
 #include "core.hpp"
 #include "logger.hpp"
@@ -63,6 +64,8 @@ namespace as::cryptox {
 
 	using t_number = as::FixedNumber;
 	using t_order_id = as::t_string;
+	// auto f = []( int av, int bv ) -> int { return av * bv; };
+	// using t_func = decltype(f);
 
 
 	struct t_price_book_ticker {
@@ -93,9 +96,7 @@ namespace as::cryptox {
 		FixedNumber m_priceIncrement;
 
 	public:
-		Pair()
-		{
-		}
+		Pair() = default;
 
 		Pair( Coin base, Coin quote, const as::t_string & name )
 			: m_base( base )
@@ -164,6 +165,70 @@ namespace as::cryptox {
 		}
 	};
 
+	/// <summary>
+	///
+	/// </summary>
+	class OrderBook {
+		std::map<t_number, t_number> m_bids;
+		std::map<t_number, t_number> m_asks;
+
+		Spinlock m_lock;
+
+	protected:
+		void add( std::map<t_number, t_number> & map,
+			const t_number & price,
+			const t_number & quantity )
+		{
+
+			SpinlockGuard l( m_lock );
+
+			if ( quantity.IsZero() ) {
+				map.erase( price );
+			}
+			else {
+				map[price] = quantity;
+			}
+		}
+
+	public:
+		void addBid( const t_number & price, const t_number & quantity )
+		{
+			add( m_bids, price, quantity );
+		}
+
+		void addAsk( const t_number & price, const t_number & quantity )
+		{
+			add( m_asks, price, quantity );
+		}
+
+		std::pair<t_number, t_number> BestBid()
+		{
+			SpinlockGuard l( m_lock );
+			auto r = m_bids.rbegin();
+
+			if ( m_bids.rend() == r ) {
+				return std::pair( t_number(), t_number() );
+			}
+
+			return *r;
+		}
+
+		std::pair<t_number, t_number> BestAsk()
+		{
+			SpinlockGuard l( m_lock );
+			auto r = m_asks.begin();
+
+			if ( m_asks.end() == r ) {
+				return std::pair( t_number(), t_number() );
+			}
+
+			return *r;
+		}
+	};
+
+	/// <summary>
+	///
+	/// </summary>
 	class Client {
 	public:
 		/// @brief
@@ -207,6 +272,8 @@ namespace as::cryptox {
 			m_coinSymbolMap;
 
 		std::vector<Pair> m_pairList;
+
+		std::unordered_map<Symbol, OrderBook> m_orderBookMap;
 
 	protected:
 		virtual void wsErrorHandler(

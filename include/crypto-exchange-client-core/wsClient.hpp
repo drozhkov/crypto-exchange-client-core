@@ -85,6 +85,9 @@ namespace as {
 		std::thread m_watchdogThread;
 		std::atomic_flag m_isWatchdogActive;
 
+		std::thread m_pingThread;
+		std::atomic_flag m_isPingActive;
+
 	protected:
 		static auto NowTs()
 		{
@@ -114,6 +117,7 @@ namespace as {
 			boost::system::error_code ec, std::size_t bytesRead );
 
 		void OnPingComplete( boost::system::error_code ec );
+
 		void OnControl(
 			boost::beast::websocket::frame_type, boost::beast::string_view );
 
@@ -130,9 +134,15 @@ namespace as {
 
 		virtual ~WsClient()
 		{
+			m_isWatchdogActive.clear();
+			m_isPingActive.clear();
+
 			if ( m_watchdogThread.joinable() ) {
-				m_isWatchdogActive.clear();
 				m_watchdogThread.join();
+			}
+
+			if ( m_pingThread.joinable() ) {
+				m_pingThread.join();
 			}
 		}
 
@@ -141,6 +151,25 @@ namespace as {
 		void write( const void * data, size_t size );
 		void writeAsync( const void * data, size_t size );
 		void pingAsync( const void * data, size_t size );
+
+		template <typename F, typename R, typename P>
+		void startPing( const F & ping,
+			const std::chrono::duration<R, P> & interval )
+		{
+
+			if ( m_pingThread.joinable() ) {
+				return;
+			}
+
+			m_isPingActive.test_and_set();
+
+			m_pingThread = std::thread( [this, ping, interval] {
+				while ( m_isPingActive.test_and_set() ) {
+					std::this_thread::sleep_for( interval );
+					ping( *this );
+				}
+			} );
+		}
 
 		void ErrorHandler( const t_wsErrorHandler & handler )
 		{

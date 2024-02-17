@@ -71,9 +71,13 @@ namespace as {
 		}
 	};
 
+	/// <summary>
+	///
+	/// </summary>
 	class Spinlock {
 	protected:
 		std::atomic_flag m_lock = ATOMIC_FLAG_INIT;
+		size_t m_cycleCount;
 
 	public:
 		~Spinlock()
@@ -83,13 +87,36 @@ namespace as {
 
 		void lock()
 		{
-			while ( m_lock.test_and_set() )
-				;
+			m_cycleCount = 0;
+
+			while ( m_lock.test_and_set() ) {
+				m_cycleCount++;
+			}
 		}
 
 		void unlock()
 		{
 			m_lock.clear();
+		}
+	};
+
+	/// <summary>
+	///
+	/// </summary>
+	/// <param name="lock"></param>
+	class SpinlockGuard {
+		Spinlock & m_lock;
+
+	public:
+		SpinlockGuard( Spinlock & lock )
+			: m_lock( lock )
+		{
+			m_lock.lock();
+		}
+
+		~SpinlockGuard()
+		{
+			m_lock.unlock();
 		}
 	};
 
@@ -122,11 +149,19 @@ namespace as {
 		{
 		}
 
+		/// <summary>
+		///
+		/// </summary>
+		/// <param name="s"></param>
 		FixedNumber( const as::t_stringview & s )
 		{
 			Value( s );
 		}
 
+		/// <summary>
+		///
+		/// </summary>
+		/// <param name="s"></param>
 		void Value( const as::t_stringview & s )
 		{
 			auto dotPos = s.find( AS_T( '.' ) );
@@ -141,6 +176,10 @@ namespace as {
 			m_denominator = s_denominators[m_exponent];
 		}
 
+		/// <summary>
+		///
+		/// </summary>
+		/// <param name="v"></param>
 		void Value( double v )
 		{
 			m_exponent = 8;
@@ -148,6 +187,10 @@ namespace as {
 			m_numerator = static_cast<int64_t>( v * m_denominator );
 		}
 
+		/// <summary>
+		///
+		/// </summary>
+		/// <returns></returns>
 		as::t_string toString() const
 		{
 			if ( INT64_C( 0 ) == m_denominator ) {
@@ -166,6 +209,11 @@ namespace as {
 			return ( i + AS_T( '.' ) + n.substr( i.length() ) );
 		}
 
+		/// <summary>
+		///
+		/// </summary>
+		/// <param name="d"></param>
+		/// <returns></returns>
 		FixedNumber div( double d ) const
 		{
 			FixedNumber result;
@@ -176,6 +224,11 @@ namespace as {
 			return result;
 		}
 
+		/// <summary>
+		///
+		/// </summary>
+		/// <param name="s"></param>
+		/// <returns></returns>
 		FixedNumber sub( double s ) const
 		{
 			FixedNumber result;
@@ -188,12 +241,43 @@ namespace as {
 			return result;
 		}
 
+		/// <summary>
+		///
+		/// </summary>
+		/// <returns></returns>
 		double Value() const
 		{
 			return ( static_cast<double>( m_numerator ) / m_denominator );
 		}
+
+		bool IsZero() const
+		{
+			return ( m_numerator == INT64_C( 0 ) );
+		}
+
+		/// <summary>
+		///
+		/// </summary>
+		/// <param name="l"></param>
+		/// <param name="r"></param>
+		/// <returns></returns>
+		bool operator<( const FixedNumber & r )
+		{
+			return ( Value() < r.Value() );
+		}
+
+		///
+		friend bool operator<( const FixedNumber & l, const FixedNumber & r )
+		{
+			return ( l.Value() < r.Value() );
+		}
 	};
 
+	/// <summary>
+	///
+	/// </summary>
+	/// <param name="buffer"></param>
+	/// <returns></returns>
 	inline t_string toHex( const t_buffer & buffer, const t_char * hex )
 	{
 		t_string out( buffer.len * 2, 0 );
@@ -206,18 +290,26 @@ namespace as {
 		return out;
 	}
 
+	///
 	inline t_string toHex( const t_buffer & buffer )
 	{
 		static t_char hex[] = AS_T( "0123456789ABCDEF" );
 		return toHex( buffer, hex );
 	}
 
+	///
 	inline t_string toHexLowerCase( const t_buffer & buffer )
 	{
 		static t_char hex[] = AS_T( "0123456789abcdef" );
 		return toHex( buffer, hex );
 	}
 
+	/// <summary>
+	///
+	/// </summary>
+	/// <param name="secret"></param>
+	/// <param name="data"></param>
+	/// <returns></returns>
 	inline as::t_string toBase64( const t_buffer & buffer )
 	{
 		t_string result( 4 * ( ( buffer.len + 2 ) / 3 ), 0 );
@@ -229,6 +321,7 @@ namespace as {
 		return result;
 	}
 
+	///
 	inline std::vector<t_byte> hmacSha256(
 		const as::t_stringview & secret, const as::t_string & data )
 	{
@@ -249,6 +342,9 @@ namespace as {
 		return result;
 	}
 
+	/// <summary>
+	///
+	/// </summary>
 	inline std::vector<t_byte> hmacSha512(
 		const as::t_stringview & secret, const as::t_string & data )
 	{
@@ -269,6 +365,9 @@ namespace as {
 		return result;
 	}
 
+	/// <summary>
+	///
+	/// </summary>
 	inline as::t_string uuidString()
 	{
 		static thread_local boost::uuids::random_generator generator;
